@@ -43,6 +43,9 @@ function fillForm() {
   fireEvent.change(screen.getByPlaceholderText("البريد الإلكتروني"), { target: { value: "ahmed@test.com" } });
   fireEvent.change(screen.getByPlaceholderText("كلمة المرور"), { target: { value: "password123" } });
   fireEvent.change(screen.getByPlaceholderText("الهاتف"), { target: { value: "0501234567" } });
+  // Fill the required date input
+  const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement;
+  if (dateInput) fireEvent.change(dateInput, { target: { value: "1990-01-15" } });
 }
 
 describe("Register Page", () => {
