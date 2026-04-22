@@ -98,7 +98,7 @@ describe("Login Page", () => {
     ["doctor", "/doctor/dashboard"],
     ["patient", "/patient/dashboard"],
     ["receptionist", "/receptionist/dashboard"],
-  ] as const)("redirects %s to %s after successful login", async (role) => {
+  ] as const)("redirects %s to %s after successful login", async (role, _path) => {
     const fakeUser = buildFakeUser({ id: `${role}-uuid`, email: `${role}@careflow.com`, role: role as any });
     const fakeSession = buildFakeSession(fakeUser);
 
