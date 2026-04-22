@@ -41,11 +41,11 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+    <BrowserRouter>
+      <TooltipProvider>
         <AuthProvider>
+          <Toaster />
+          <Sonner />
           <Routes>
             {/* Public */}
             <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
@@ -98,8 +98,8 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+      </TooltipProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 
