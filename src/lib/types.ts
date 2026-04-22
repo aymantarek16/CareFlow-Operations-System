@@ -68,3 +68,40 @@ export type OverviewMetric = {
   hint: string;
   tone?: "emerald" | "cyan" | "violet" | "amber" | "rose";
 };
+
+export type Department = {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at?: string;
+};
+
+export type SystemSettings = {
+  id: string;
+  key: string;
+  value: string;
+  updated_at?: string;
+  updated_by?: string;
+};
+
+export type ActivityLog = {
+  id: string;
+  user_id: string;
+  user_name: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  details: string | null;
+  created_at?: string;
+};
+
+export type Prescription = {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  medical_record_id: string | null;
+  medications: string;
+  instructions: string | null;
+  status: "active" | "completed" | "cancelled";
+  created_at?: string;
+};

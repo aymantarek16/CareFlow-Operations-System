@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import type { AppointmentRecord, DoctorProfile, PatientProfile, InvoiceRecord, MedicalRecord } from "@/lib/types";
+import type { AppointmentRecord, DoctorProfile, PatientProfile, InvoiceRecord, MedicalRecord, Department, ActivityLog, SystemSettings } from "@/lib/types";
 
 export function useSupabaseQuery<T>(table: string, options?: { column?: string; value?: string; orderBy?: string; ascending?: boolean; limit?: number }) {
   const [data, setData] = useState<T[]>([]);
@@ -32,6 +32,9 @@ export function useDoctors() { return useSupabaseQuery<DoctorProfile>("doctors",
 export function useAppointments() { return useSupabaseQuery<AppointmentRecord>("appointments", { orderBy: "appointment_date", ascending: true }); }
 export function useMedicalRecords() { return useSupabaseQuery<MedicalRecord>("medical_records", { orderBy: "created_at", limit: 50 }); }
 export function useInvoices() { return useSupabaseQuery<InvoiceRecord>("invoices", { orderBy: "created_at", limit: 50 }); }
+export function useDepartments() { return useSupabaseQuery<Department>("departments", { orderBy: "name" }); }
+export function useActivityLogs() { return useSupabaseQuery<ActivityLog>("activity_logs", { orderBy: "created_at", limit: 50 }); }
+export function useSystemSettings() { return useSupabaseQuery<SystemSettings>("system_settings", { orderBy: "key" }); }
 
 export function useCount(table: string) {
   const [count, setCount] = useState(0);

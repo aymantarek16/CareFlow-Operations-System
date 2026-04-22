@@ -2,11 +2,16 @@ import { useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
+import { SkeletonTable, SkeletonForm } from "@/components/ui/SkeletonTable";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useAppointments, useDoctors, usePatients } from "@/hooks/useData";
+import { useDeleteMutation, useUpdateMutation, useInsertMutation } from "@/hooks/useMutation";
 import { formatDate, formatTime } from "@/lib/helpers";
-import { supabase } from "@/lib/supabase";
+import type { AppointmentRecord } from "@/lib/types";
 import { Link } from "react-router-dom";
+import { Pencil, Trash2, Plus, Search, CalendarPlus } from "lucide-react";
 
 export default function AdminAppointments() {
   const { data: appointments, loading, refetch } = useAppointments();
@@ -15,8 +20,15 @@ export default function AdminAppointments() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [form, setForm] = useState({ patient_id: "", doctor_id: "", appointment_date: "", appointment_time: "", status: "scheduled", reason: "", notes: "" });
-  const [msg, setMsg] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
+  
+  // Edit state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingAppt, setEditingAppt] = useState<AppointmentRecord | null>(null);
+  const [editForm, setEditForm] = useState({ status: "", notes: "" });
+  
+  // Delete state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingAppt, setDeletingAppt] = useState<AppointmentRecord | null>(null);
 
   const doctorMap = new Map(doctors.map((d) => [d.id, `${d.first_name ?? ""} ${d.last_name ?? ""}`.trim() || d.id]));
   const patientMap = new Map(patients.map((p) => [p.id, `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || p.id]));
@@ -27,14 +39,60 @@ export default function AdminAppointments() {
     return name.toLowerCase().includes(search.toLowerCase());
   });
 
+  const { insertItem: createAppt, loading: createLoading } = useInsertMutation<AppointmentRecord>("appointments", {
+    onSuccess: () => {
+      refetch();
+      setForm({ patient_id: "", doctor_id: "", appointment_date: "", appointment_time: "", status: "scheduled", reason: "", notes: "" });
+    },
+    successMessage: "تم إنشاء الموعد بنجاح",
+  });
+
+  const { deleteItem: deleteAppt, loading: deleteLoading } = useDeleteMutation<AppointmentRecord>("appointments", {
+    onSuccess: () => {
+      refetch();
+      setDeleteDialogOpen(false);
+      setDeletingAppt(null);
+    },
+    successMessage: "تم حذف الموعد بنجاح",
+  });
+  
+  const { updateItem: updateAppt, loading: updateLoading } = useUpdateMutation<AppointmentRecord>("appointments", {
+    onSuccess: () => {
+      refetch();
+      setEditModalOpen(false);
+      setEditingAppt(null);
+    },
+    successMessage: "تم تحديث الموعد بنجاح",
+  });
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMsg(null);
-    setCreating(true);
-    const { error } = await supabase.from("appointments").insert(form);
-    if (error) setMsg(error.message);
-    else { setMsg("تم إنشاء الموعد بنجاح"); refetch(); }
-    setCreating(false);
+    await createAppt(form);
+  };
+
+  const handleEditClick = (appt: AppointmentRecord) => {
+    setEditingAppt(appt);
+    setEditForm({
+      status: appt.status || "scheduled",
+      notes: appt.notes || "",
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAppt) return;
+    await updateAppt(editingAppt.id, editForm);
+  };
+
+  const handleDeleteClick = (appt: AppointmentRecord) => {
+    setDeletingAppt(appt);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deletingAppt) return;
+    deleteAppt(deletingAppt.id);
   };
 
   const inputClass = "h-12 w-full rounded-2xl border border-foreground/10 bg-foreground/5 px-4 text-sm text-foreground outline-none transition focus:border-primary/50";
@@ -43,8 +101,17 @@ export default function AdminAppointments() {
   return (
     <div>
       <PageHeader eyebrow="Admin / Scheduling" title="إدارة المواعيد" description="جدولة واضحة مع ربط مباشر بين المريض والطبيب." />
-      <div className="mb-4 flex flex-wrap gap-3">
-        <input placeholder="بحث..." value={search} onChange={(e) => setSearch(e.target.value)} className={inputClass + " max-w-xs"} />
+      
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/40" />
+          <input 
+            placeholder="بحث..." 
+            value={search} 
+            onChange={(e) => setSearch(e.target.value)} 
+            className={inputClass + " pr-10"} 
+          />
+        </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={selectClass + " max-w-xs"}>
           <option value="">كل الحالات</option>
           <option value="scheduled">مجدول</option>
@@ -55,52 +122,164 @@ export default function AdminAppointments() {
           <option value="no-show">لم يحضر</option>
         </select>
       </div>
+
       <div className="grid gap-6 xl:grid-cols-[1.35fr,0.65fr]">
-        <GlassCard title={`المواعيد (${filtered.length})`} subtitle="جدول تشغيلي مباشر">
-          {loading ? <p className="text-foreground/50 py-8 text-center">جاري التحميل...</p> : (
+        <GlassCard 
+          title={`المواعيد (${filtered.length})`} 
+          subtitle="جدول تشغيلي مباشر"
+          action={
+            <button className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20">
+              <CalendarPlus className="h-3.5 w-3.5" />
+              حجز موعد
+            </button>
+          }
+        >
+          {loading ? (
+            <SkeletonTable rows={5} columns={7} />
+          ) : filtered.length === 0 ? (
+            <EmptyState 
+              variant={search || statusFilter ? "search" : "data"}
+              action={
+                (search || statusFilter) ? undefined : (
+                  <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-background">
+                    <Plus className="h-4 w-4" />
+                    حجز أول موعد
+                  </button>
+                )
+              }
+            />
+          ) : (
             <DataTable
-              columns={["المريض", "الطبيب", "التاريخ", "الوقت", "الحالة", "الملاحظات", ""]}
+              columns={["المريض", "الطبيب", "التاريخ", "الوقت", "الحالة", "الملاحظات", "الإجراءات"]}
               rows={filtered.map((a) => [
                 patientMap.get(a.patient_id) ?? a.patient_id,
                 doctorMap.get(a.doctor_id) ?? a.doctor_id,
                 formatDate(a.appointment_date), formatTime(a.appointment_time),
                 <StatusBadge key={a.id} status={a.status} />,
                 a.notes ?? a.reason ?? "-",
-                <Link key={a.id + "l"} to={`/admin/appointments/${a.id}`} className="text-primary text-xs hover:underline">عرض</Link>,
+                <div key={a.id} className="flex items-center gap-2">
+                  <Link to={`/admin/appointments/${a.id}`} className="text-primary text-xs hover:underline">عرض</Link>
+                  <button 
+                    onClick={() => handleEditClick(a)}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-400/10 text-amber-400 hover:bg-amber-400/20"
+                    title="تعديل الحالة"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteClick(a)}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-400/10 text-rose-400 hover:bg-rose-400/20"
+                    title="حذف"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>,
               ])}
             />
           )}
         </GlassCard>
+
         <GlassCard title="إضافة موعد جديد" subtitle="حجز سريع">
-          <form onSubmit={handleCreate} className="grid gap-3">
-            <select value={form.patient_id} onChange={(e) => setForm({ ...form, patient_id: e.target.value })} className={selectClass} required>
-              <option value="">اختر المريض</option>
-              {patients.map((p) => <option key={p.id} value={p.id}>{`${p.first_name ?? ""} ${p.last_name ?? ""}`}</option>)}
-            </select>
-            <select value={form.doctor_id} onChange={(e) => setForm({ ...form, doctor_id: e.target.value })} className={selectClass} required>
-              <option value="">اختر الطبيب</option>
-              {doctors.map((d) => <option key={d.id} value={d.id}>{`${d.first_name ?? ""} ${d.last_name ?? ""} — ${d.specialty ?? "عام"}`}</option>)}
-            </select>
-            <div className="grid grid-cols-2 gap-3">
-              <input type="date" value={form.appointment_date} onChange={(e) => setForm({ ...form, appointment_date: e.target.value })} className={inputClass} required />
-              <input type="time" value={form.appointment_time} onChange={(e) => setForm({ ...form, appointment_time: e.target.value })} className={inputClass} required />
-            </div>
-            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className={selectClass}>
-              <option value="scheduled">مجدول</option>
-              <option value="checked-in">تم التسجيل</option>
-              <option value="in-progress">قيد التنفيذ</option>
-              <option value="completed">مكتمل</option>
-              <option value="cancelled">ملغى</option>
-            </select>
-            <input placeholder="سبب الزيارة" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className={inputClass} />
-            <input placeholder="ملاحظات" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputClass} />
-            {msg && <p className="text-sm text-foreground/70">{msg}</p>}
-            <button disabled={creating} type="submit" className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-background disabled:opacity-60">
-              {creating ? "جارٍ الحفظ..." : "إضافة موعد"}
-            </button>
-          </form>
+          {loading ? (
+            <SkeletonForm fields={7} />
+          ) : (
+            <form onSubmit={handleCreate} className="grid gap-3">
+              <select value={form.patient_id} onChange={(e) => setForm({ ...form, patient_id: e.target.value })} className={selectClass} required>
+                <option value="">اختر المريض</option>
+                {patients.map((p) => <option key={p.id} value={p.id}>{`${p.first_name ?? ""} ${p.last_name ?? ""}`}</option>)}
+              </select>
+              <select value={form.doctor_id} onChange={(e) => setForm({ ...form, doctor_id: e.target.value })} className={selectClass} required>
+                <option value="">اختر الطبيب</option>
+                {doctors.map((d) => <option key={d.id} value={d.id}>{`${d.first_name ?? ""} ${d.last_name ?? ""} — ${d.specialty ?? "عام"}`}</option>)}
+              </select>
+              <div className="grid grid-cols-2 gap-3">
+                <input type="date" value={form.appointment_date} onChange={(e) => setForm({ ...form, appointment_date: e.target.value })} className={inputClass} required />
+                <input type="time" value={form.appointment_time} onChange={(e) => setForm({ ...form, appointment_time: e.target.value })} className={inputClass} required />
+              </div>
+              <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className={selectClass}>
+                <option value="scheduled">مجدول</option>
+                <option value="checked-in">تم التسجيل</option>
+                <option value="in-progress">قيد التنفيذ</option>
+                <option value="completed">مكتمل</option>
+                <option value="cancelled">ملغى</option>
+              </select>
+              <input placeholder="سبب الزيارة" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className={inputClass} />
+              <input placeholder="ملاحظات" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputClass} />
+              <button disabled={createLoading} type="submit" className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-background disabled:opacity-60 flex items-center justify-center gap-2">
+                {createLoading ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                    جارٍ الحفظ...
+                  </>
+                ) : (
+                  <>
+                    <CalendarPlus className="h-4 w-4" />
+                    إضافة موعد
+                  </>
+                )}
+              </button>
+            </form>
+          )}
         </GlassCard>
       </div>
+
+      {/* Edit Modal */}
+      {editModalOpen && editingAppt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-[28px] border border-foreground/10 bg-background/95 p-6 shadow-2xl">
+            <h3 className="mb-4 text-lg font-bold text-foreground">تحديث حالة الموعد</h3>
+            <form onSubmit={handleEditSubmit} className="grid gap-3">
+              <select 
+                value={editForm.status} 
+                onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} 
+                className={selectClass}
+              >
+                <option value="scheduled">مجدول</option>
+                <option value="checked-in">تم التسجيل</option>
+                <option value="in-progress">قيد التنفيذ</option>
+                <option value="completed">مكتمل</option>
+                <option value="cancelled">ملغى</option>
+                <option value="no-show">لم يحضر</option>
+              </select>
+              <textarea 
+                placeholder="ملاحظات" 
+                value={editForm.notes} 
+                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} 
+                className={inputClass + " min-h-[80px] py-3 resize-none"} 
+              />
+              <div className="mt-2 flex gap-2">
+                <button 
+                  type="button" 
+                  onClick={() => setEditModalOpen(false)}
+                  className="flex-1 h-11 rounded-2xl border border-foreground/10 bg-foreground/5 text-sm font-semibold text-foreground hover:bg-foreground/10"
+                >
+                  إلغاء
+                </button>
+                <button 
+                  disabled={updateLoading}
+                  type="submit" 
+                  className="flex-1 h-11 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-sm font-bold text-background disabled:opacity-60"
+                >
+                  {updateLoading ? "جاري الحفظ..." : "حفظ التغييرات"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="تأكيد حذف الموعد"
+        description={`هل أنت متأكد من حذف هذا الموعد؟ لا يمكن التراجع عن هذا الإجراء.`}
+        confirmText="حذف نهائي"
+        cancelText="إلغاء"
+        onConfirm={handleDeleteConfirm}
+        variant="danger"
+        loading={deleteLoading}
+      />
     </div>
   );
 }

@@ -20,6 +20,7 @@ import AdminInvoices from "./pages/admin/AdminInvoices";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminActivity from "./pages/admin/AdminActivity";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminDepartments from "./pages/admin/AdminDepartments";
 import DoctorDashboard from "./pages/doctor/DoctorDashboard";
 import DoctorAppointments from "./pages/doctor/DoctorAppointments";
 import DoctorPatients from "./pages/doctor/DoctorPatients";
@@ -65,6 +66,7 @@ const App = () => (
               <Route path="/admin/analytics" element={<AdminAnalytics />} />
               <Route path="/admin/activity" element={<AdminActivity />} />
               <Route path="/admin/settings" element={<AdminSettings />} />
+              <Route path="/admin/departments" element={<AdminDepartments />} />
             </Route>
 
             {/* Doctor */}
