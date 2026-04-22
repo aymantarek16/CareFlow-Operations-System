@@ -8,24 +8,39 @@ interface AuthState {
   user: User | null;
   appUser: AppUser | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null; role?: AppRole }>;
   signUp: (email: string, password: string, meta: Record<string, string>) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
 
-/** Build an AppUser from the users table row, or fall back to auth metadata */
+/** Known demo account roles */
+const DEMO_ROLES: Record<string, AppRole> = {
+  "admin@careflow.com": "admin",
+  "doctor@careflow.com": "doctor",
+  "patient@careflow.com": "patient",
+  "receptionist@careflow.com": "receptionist",
+};
+
+/** Determine role from all available sources */
+function resolveRole(user: User): AppRole {
+  // 1. Check user_metadata
+  const metaRole = user.user_metadata?.role;
+  if (metaRole && ["admin", "doctor", "patient", "receptionist"].includes(metaRole)) {
+    return metaRole as AppRole;
+  }
+  // 2. Check demo accounts
+  const email = user.email?.toLowerCase() ?? "";
+  if (DEMO_ROLES[email]) return DEMO_ROLES[email];
+  // 3. Default
+  return "patient";
+}
+
 function buildAppUserFromAuth(user: User): AppUser {
-  const meta = user.user_metadata ?? {};
-  const role: AppRole = meta.role ?? "patient";
-  const name = meta.name ?? meta.full_name ?? user.email?.split("@")[0] ?? "User";
-  return {
-    id: user.id,
-    name,
-    email: user.email ?? "",
-    role,
-  };
+  const role = resolveRole(user);
+  const name = user.user_metadata?.name ?? user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User";
+  return { id: user.id, name, email: user.email ?? "", role };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -34,41 +49,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchAppUser = async (authUser: User) => {
+  const fetchAppUser = async (authUser: User): Promise<AppUser> => {
+    // Try DB first with a timeout
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+
       const { data, error } = await supabase
         .from("users")
         .select("id, name, email, role, created_at")
         .eq("id", authUser.id)
-        .single();
+        .single()
+        .abortSignal(controller.signal);
 
-      if (error || !data) {
-        // RLS or missing row — fall back to auth metadata
-        console.warn("Could not fetch users row, using auth metadata:", error?.message);
-        setAppUser(buildAppUserFromAuth(authUser));
-      } else {
-        setAppUser(data as AppUser);
+      clearTimeout(timeout);
+
+      if (!error && data) {
+        const appUserData = data as AppUser;
+        setAppUser(appUserData);
+        return appUserData;
       }
     } catch {
-      setAppUser(buildAppUserFromAuth(authUser));
+      // DB query failed or timed out — use fallback
     }
+
+    // Fallback to auth metadata + email mapping
+    const fallback = buildAppUserFromAuth(authUser);
+    setAppUser(fallback);
+    return fallback;
   };
 
   useEffect(() => {
-    // 1. Listen for auth changes — no await inside callback
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        // fire-and-forget to avoid blocking the listener
-        fetchAppUser(session.user);
+        fetchAppUser(session.user).finally(() => setLoading(false));
       } else {
         setAppUser(null);
         setLoading(false);
       }
     });
 
-    // 2. Restore session from storage
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -83,8 +105,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: error.message };
+
+    // Immediately resolve role so caller can navigate
+    if (data.user) {
+      const appUserResult = await fetchAppUser(data.user);
+      return { error: null, role: appUserResult.role };
+    }
+    return { error: null };
   };
 
   const signUp = async (email: string, password: string, meta: Record<string, string>) => {
