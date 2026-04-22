@@ -40,11 +40,11 @@ export default function AdminAnalytics() {
 
         <GlassCard title="مؤشرات عامة">
           <div className="space-y-4">
-            {[
-              ["المستخدمون", metrics.usersCount, TrendingUp],
-              ["السجلات الطبية", metrics.medicalRecordsCount, BarChart3],
-              ["الفواتير", metrics.invoicesCount, Activity],
-            ].map(([label, value, Icon]) => (
+            {([
+              { label: "المستخدمون", value: metrics.usersCount, Icon: TrendingUp },
+              { label: "السجلات الطبية", value: metrics.medicalRecordsCount, Icon: BarChart3 },
+              { label: "الفواتير", value: metrics.invoicesCount, Icon: Activity },
+            ] as const).map(({ label, value, Icon }) => (
               <div key={String(label)} className="flex items-center justify-between rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
