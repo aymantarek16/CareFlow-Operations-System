@@ -5,23 +5,22 @@
  * - Calls signIn and redirects based on role after successful login
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { PublicRoute } from "@/components/auth/ProtectedRoute";
 import LoginPage from "@/pages/Login";
 import {
   resetAllMocks,
   mockSignInWithPassword,
   mockGetSession,
-  mockOnAuthStateChange,
   mockFrom,
   buildFakeUser,
   buildFakeSession,
   fireAuthStateChange,
 } from "@/test/__mocks__/supabase";
 
-// Mock the supabase module
 vi.mock("@/lib/supabase", () => import("@/test/__mocks__/supabase"));
 
 function DummyDashboard({ label }: { label: string }) {
@@ -35,7 +34,7 @@ function renderLogin(route = "/login") {
       <MemoryRouter initialEntries={[route]}>
         <AuthProvider>
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/admin/dashboard" element={<DummyDashboard label="admin" />} />
             <Route path="/doctor/dashboard" element={<DummyDashboard label="doctor" />} />
             <Route path="/patient/dashboard" element={<DummyDashboard label="patient" />} />
@@ -109,23 +108,21 @@ describe("Login Page", () => {
     ["doctor", "/doctor/dashboard"],
     ["patient", "/patient/dashboard"],
     ["receptionist", "/receptionist/dashboard"],
-  ] as const)("redirects %s to %s after successful login", async (role, expectedPath) => {
+  ] as const)("redirects %s to %s after successful login", async (role, _expectedPath) => {
     const fakeUser = buildFakeUser({ id: `${role}-uuid`, email: `${role}@careflow.com`, role: role as any });
     const fakeSession = buildFakeSession(fakeUser);
 
-    // signIn succeeds
     mockSignInWithPassword.mockResolvedValueOnce({
       data: { user: fakeUser, session: fakeSession },
       error: null,
     });
 
-    // DB query for users table — fails (RLS), so fallback to metadata is used
-    const mockBuilder: any = {
+    // DB query fails (RLS) — fallback to metadata
+    mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: null, error: { message: "infinite recursion" } }),
-    };
-    mockFrom.mockReturnValue(mockBuilder);
+    });
 
     renderLogin();
 
@@ -137,12 +134,14 @@ describe("Login Page", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /تسجيل الدخول/i }));
 
-    // Simulate the auth state change that Supabase fires after login
     await waitFor(() => {
       expect(mockSignInWithPassword).toHaveBeenCalled();
     });
 
-    fireAuthStateChange("SIGNED_IN", fakeSession);
+    // Simulate the auth state change that Supabase fires after login
+    await act(async () => {
+      fireAuthStateChange("SIGNED_IN", fakeSession);
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId("dashboard")).toHaveTextContent(role);
