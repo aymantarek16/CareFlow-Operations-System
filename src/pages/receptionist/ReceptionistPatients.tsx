@@ -1,17 +1,63 @@
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
+import { SkeletonTable } from "@/components/ui/SkeletonTable";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { usePatients } from "@/hooks/useData";
 import { useState } from "react";
+import { Search, Users } from "lucide-react";
+
 export default function ReceptionistPatients() {
   const { data: patients, loading } = usePatients();
   const [search, setSearch] = useState("");
   const filtered = patients.filter((p) => `${p.first_name} ${p.last_name} ${p.phone}`.toLowerCase().includes(search.toLowerCase()));
-  return (<div><PageHeader eyebrow="Receptionist / Patients" title="إدارة المرضى" />
-    <input placeholder="بحث..." value={search} onChange={(e)=>setSearch(e.target.value)} className="h-12 w-full max-w-md rounded-2xl border border-foreground/10 bg-foreground/5 px-4 text-sm text-foreground outline-none mb-4" />
-    <GlassCard title={`المرضى (${filtered.length})`}>
-      {loading ? <p className="text-foreground/50 py-8 text-center">جاري التحميل...</p> :
-      <DataTable columns={["الاسم","الهاتف","النوع","تاريخ الميلاد"]}
-        rows={filtered.map((p)=>[`${p.first_name??""} ${p.last_name??""}`.trim()||"-", p.phone??"-", p.gender??"-", p.date_of_birth??"-"])} />}
-    </GlassCard></div>);
+
+  const inputClass = "h-12 w-full rounded-2xl border border-foreground/10 bg-foreground/5 px-4 text-sm text-foreground outline-none transition focus:border-primary/50";
+
+  return (
+    <div>
+      <PageHeader eyebrow="Receptionist / Patients" title="إدارة المرضى" description="عرض والبحث في سجلات المرضى" />
+      <div className="mb-4 flex items-center gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/40" />
+          <input
+            placeholder="بحث عن مريض..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={inputClass + " pr-10"}
+          />
+        </div>
+      </div>
+      <GlassCard
+        title={`المرضى (${filtered.length})`}
+        subtitle="قائمة جميع المرضى المسجلين"
+        action={
+          <button className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20">
+            <Users className="h-3.5 w-3.5" />
+            إضافة مريض
+          </button>
+        }
+      >
+        {loading ? (
+          <SkeletonTable rows={5} columns={4} />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            variant={search ? "search" : "data"}
+            title="لا يوجد مرضى"
+            description={search ? "لا توجد نتائج مطابقة للبحث" : "لم يتم تسجيل أي مرضى بعد"}
+          />
+        ) : (
+          <DataTable
+            columns={["الاسم", "الهاتف", "النوع", "تاريخ الميلاد"]}
+            rows={filtered.map((p) => [
+              `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || "-",
+              p.phone ?? "-",
+              p.gender === "male" ? "ذكر" : p.gender === "female" ? "أنثى" : p.gender ?? "-",
+              p.date_of_birth ?? "-",
+            ])}
+          />
+        )}
+      </GlassCard>
+    </div>
+  );
 }

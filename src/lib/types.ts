@@ -99,9 +99,13 @@ export type Prescription = {
   id: string;
   patient_id: string;
   doctor_id: string;
-  medical_record_id: string | null;
-  medications: string;
-  instructions: string | null;
-  status: "active" | "completed" | "cancelled";
+  medical_record_id?: string | null;
+  medication?: string;
+  medications?: string;
+  dosage?: string;
+  frequency?: string;
+  duration?: string;
+  instructions?: string | null;
+  status?: "active" | "completed" | "cancelled";
   created_at?: string;
 };

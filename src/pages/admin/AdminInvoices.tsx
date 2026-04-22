@@ -1,26 +1,74 @@
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
+import { SkeletonTable } from "@/components/ui/SkeletonTable";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useInvoices } from "@/hooks/useData";
 import { formatDate } from "@/lib/helpers";
+import { CreditCard, FileText } from "lucide-react";
 
 export default function AdminInvoices() {
   const { data: invoices, loading } = useInvoices();
 
+  const totalAmount = invoices.reduce((sum, i) => sum + Number(i.amount || 0), 0);
+  const paidAmount = invoices.filter((i) => i.status === "paid").reduce((sum, i) => sum + Number(i.amount || 0), 0);
+  const pendingAmount = invoices.filter((i) => i.status === "pending").reduce((sum, i) => sum + Number(i.amount || 0), 0);
+
   return (
     <div>
       <PageHeader eyebrow="Admin / Billing" title="الفواتير والحسابات" description="إدارة الفواتير والمدفوعات للمرضى." />
-      <GlassCard title={`الفواتير (${invoices.length})`} subtitle="جميع الفواتير المسجلة">
-        {loading ? <p className="text-foreground/50 py-8 text-center">جاري التحميل...</p> : (
+
+      {/* Summary Cards */}
+      <div className="mb-4 grid grid-cols-3 gap-4">
+        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-4">
+          <p className="text-xs text-foreground/50">إجمالي الفواتير</p>
+          <p className="text-2xl font-bold text-foreground">{invoices.length}</p>
+        </div>
+        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-4">
+          <p className="text-xs text-foreground/50">المدفوع</p>
+          <p className="text-2xl font-bold text-emerald-400">{paidAmount.toFixed(2)} ر.س</p>
+        </div>
+        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-4">
+          <p className="text-xs text-foreground/50">المعلق</p>
+          <p className="text-2xl font-bold text-amber-400">{pendingAmount.toFixed(2)} ر.س</p>
+        </div>
+      </div>
+
+      <GlassCard
+        title={`الفواتير (${invoices.length})`}
+        subtitle="جميع الفواتير المسجلة"
+        action={
+          <button className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20">
+            <CreditCard className="h-3.5 w-3.5" />
+            فاتورة جديدة
+          </button>
+        }
+      >
+        {loading ? (
+          <SkeletonTable rows={5} columns={5} />
+        ) : invoices.length === 0 ? (
+          <EmptyState
+            variant="data"
+            title="لا توجد فواتير"
+            description="لم يتم إصدار أي فواتير بعد"
+            action={
+              <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-background">
+                <FileText className="h-4 w-4" />
+                إنشاء فاتورة
+              </button>
+            }
+          />
+        ) : (
           <DataTable
             columns={["رقم الفاتورة", "المبلغ", "الحالة", "تاريخ الإصدار", "ملاحظات"]}
             rows={invoices.map((inv) => [
-              inv.id.slice(0, 8), `${inv.amount} ر.س`,
+              inv.id.slice(0, 8),
+              `${inv.amount} ر.س`,
               <StatusBadge key={inv.id} status={inv.status} />,
-              formatDate(inv.issue_date), inv.notes ?? "-",
+              formatDate(inv.issue_date),
+              <span key={inv.id} className="line-clamp-2 max-w-[200px] text-foreground/60">{inv.notes ?? "-"}</span>,
             ])}
-            emptyMessage="لا توجد فواتير حالياً. ستظهر عند إضافة بيانات لجدول invoices."
           />
         )}
       </GlassCard>
