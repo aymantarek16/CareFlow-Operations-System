@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { routeByRole } from "@/lib/helpers";
 import { Sparkles, Building2, ShieldCheck, Stethoscope, HeartPulse } from "lucide-react";
 
 export default function LoginPage() {
   const { signIn } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -14,9 +16,14 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error } = await signIn(email, password);
-    if (error) setError(error);
-    setLoading(false);
+    const result = await signIn(email, password);
+    if (result.error) {
+      setError(result.error);
+      setLoading(false);
+    } else if (result.role) {
+      // Navigate immediately based on resolved role
+      navigate(routeByRole(result.role), { replace: true });
+    }
   };
 
   return (
