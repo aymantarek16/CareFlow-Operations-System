@@ -58,19 +58,19 @@ export function Topbar() {
             <Menu size={20} />
           </button>
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-2 text-xs uppercase tracking-[0.24em] text-primary/70">
+            {/* <div className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.04] px-3 py-2 text-xs uppercase tracking-[0.24em] text-primary/70">
               <Sparkles size={12} />
               Production ready
-            </div>
+            </div> */}
             <p className="mt-2 text-sm text-foreground/48">{now}</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        {/* <div className="flex flex-wrap items-center gap-3">
           <div className="flex h-11 items-center gap-2 rounded-2xl border border-foreground/10 bg-foreground/[0.03] px-4 text-sm text-foreground/60">
             <Bell size={17} className="text-amber-300" />
             صفر أعطال حرجة
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Mobile sidebar overlay */}

@@ -53,11 +53,11 @@ export function AppSidebar({ user }: { user: AppUser }) {
         <div className="relative flex items-start justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.36em] text-primary/70">CareFlow Prime</p>
-            <h1 className="mt-2 text-2xl font-black text-foreground">Medical Ops</h1>
-            <p className="mt-2 text-sm leading-7 text-foreground/55">منصة تشغيل طبية متكاملة</p>
+            <h1 className="mt-2 text-2xl font-black text-foreground">CareFlow</h1>
+            <p className="mt-2 text-sm leading-7 text-foreground/55">نظام إدارة العيادات والمراكز الطبية</p>
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
-            <ShieldCheck size={20} />
+          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl">
+            <img src="/careflow.png" alt="CareFlow" className="h-full w-full object-cover" />
           </div>
         </div>
       </div>
