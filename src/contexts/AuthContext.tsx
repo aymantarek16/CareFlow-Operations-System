@@ -52,25 +52,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchAppUser = async (authUser: User): Promise<AppUser> => {
     // Try DB first with a timeout
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000);
+      const result = await Promise.race([
+        supabase
+          .from("users")
+          .select("id, name, email, role, created_at")
+          .eq("id", authUser.id)
+          .single(),
+        new Promise<{ data: null; error: { message: string } }>((resolve) =>
+          setTimeout(() => resolve({ data: null, error: { message: "timeout" } }), 3000)
+        ),
+      ]);
 
-      const { data, error } = await supabase
-        .from("users")
-        .select("id, name, email, role, created_at")
-        .eq("id", authUser.id)
-        .single()
-        .abortSignal(controller.signal);
-
-      clearTimeout(timeout);
-
-      if (!error && data) {
-        const appUserData = data as AppUser;
+      if (!result.error && result.data) {
+        const appUserData = result.data as AppUser;
         setAppUser(appUserData);
         return appUserData;
       }
     } catch {
-      // DB query failed or timed out — use fallback
+      // DB query failed — use fallback
     }
 
     // Fallback to auth metadata + email mapping
