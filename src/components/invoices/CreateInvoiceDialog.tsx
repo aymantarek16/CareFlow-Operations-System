@@ -134,7 +134,7 @@ export function CreateInvoiceDialog({ open, onOpenChange, onCreated }: CreateInv
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-xs font-semibold text-foreground/70">
-                المبلغ (ر.س)
+                المبلغ (ج.م)
               </label>
               <input
                 type="number"

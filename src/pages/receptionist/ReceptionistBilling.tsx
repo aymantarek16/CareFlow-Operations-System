@@ -33,11 +33,11 @@ export default function ReceptionistBilling() {
         </div>
         <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-4">
           <p className="text-xs text-foreground/50">المدفوع</p>
-          <p className="text-2xl font-bold text-emerald-400">{paidAmount.toFixed(2)} ر.س</p>
+          <p className="text-2xl font-bold text-emerald-400">{paidAmount.toFixed(2)} ج.م</p>
         </div>
         <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-4">
           <p className="text-xs text-foreground/50">المعلق</p>
-          <p className="text-2xl font-bold text-amber-400">{pendingAmount.toFixed(2)} ر.س</p>
+          <p className="text-2xl font-bold text-amber-400">{pendingAmount.toFixed(2)}ج.م</p>
         </div>
       </div>
 
@@ -78,7 +78,7 @@ export default function ReceptionistBilling() {
             columns={["رقم", "المبلغ", "الحالة", "التاريخ", "ملاحظات"]}
             rows={invoices.map((i) => [
               i.id.slice(0, 8),
-              `${i.amount} ر.س`,
+              `${i.amount} ج.م`,
               <StatusBadge key={i.id} status={i.status} />,
               formatDate(i.issue_date),
               <span key={i.id} className="line-clamp-2 max-w-[200px] text-foreground/60">

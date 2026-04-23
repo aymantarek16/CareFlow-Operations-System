@@ -29,11 +29,11 @@ export default function AdminInvoices() {
         </div>
         <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-4">
           <p className="text-xs text-foreground/50">المدفوع</p>
-          <p className="text-2xl font-bold text-emerald-400">{paidAmount.toFixed(2)} ر.س</p>
+          <p className="text-2xl font-bold text-emerald-400">{paidAmount.toFixed(2)} ج.م</p>
         </div>
         <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-4">
           <p className="text-xs text-foreground/50">المعلق</p>
-          <p className="text-2xl font-bold text-amber-400">{pendingAmount.toFixed(2)} ر.س</p>
+          <p className="text-2xl font-bold text-amber-400">{pendingAmount.toFixed(2)} ج.م</p>
         </div>
       </div>
 
@@ -74,7 +74,7 @@ export default function AdminInvoices() {
             columns={["رقم الفاتورة", "المبلغ", "الحالة", "تاريخ الإصدار", "ملاحظات"]}
             rows={invoices.map((inv) => [
               inv.id.slice(0, 8),
-              `${inv.amount} ر.س`,
+              `${inv.amount}ج.م`,
               <StatusBadge key={inv.id} status={inv.status} />,
               formatDate(inv.issue_date),
               <span key={inv.id} className="line-clamp-2 max-w-[200px] text-foreground/60">{inv.notes ?? "-"}</span>,
