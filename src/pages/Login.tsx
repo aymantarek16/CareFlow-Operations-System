@@ -95,6 +95,9 @@ export default function LoginPage() {
                       <p>
                         <span className="text-primary">مريض :</span> patient@careflow.com / 12345678
                       </p>
+                      <p>
+                        <span className="text-primary">موظف استقبال :</span> receptionist@careflow.com / 12345678
+                      </p>
                     </div>
                   </div>
 
