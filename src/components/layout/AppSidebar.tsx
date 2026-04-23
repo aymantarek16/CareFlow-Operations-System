@@ -15,6 +15,7 @@ import {
   Pill,
   LogOut,
   Building2,
+  UserCog,
 } from "lucide-react";
 import type { AppRole, AppUser } from "@/lib/types";
 import { RoleBadge } from "@/components/ui/StatusBadge";
@@ -26,6 +27,7 @@ const NAV: Record<AppRole, { href: string; label: string; icon: typeof LayoutDas
     { href: "/admin/dashboard", label: "مركز القيادة", icon: LayoutDashboard },
     { href: "/admin/patients", label: "ملفات المرضى", icon: Users },
     { href: "/admin/doctors", label: "طاقم الأطباء", icon: Stethoscope },
+    { href: "/admin/staff", label: "الموظفون والإدارة", icon: UserCog },
     { href: "/admin/departments", label: "الأقسام والتخصصات", icon: Building2 },
     { href: "/admin/appointments", label: "إدارة المواعيد", icon: CalendarDays },
     { href: "/admin/invoices", label: "الفواتير والمدفوعات", icon: CreditCard },

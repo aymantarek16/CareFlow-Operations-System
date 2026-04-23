@@ -1,4 +1,4 @@
-import { Bell, Sparkles, Menu, LogOut } from "lucide-react";
+import { Bell, Sparkles, Menu, LogOut, UserCog } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -12,6 +12,7 @@ const NAV: Record<AppRole, { href: string; label: string; icon: typeof LayoutDas
     { href: "/admin/dashboard", label: "مركز القيادة", icon: LayoutDashboard },
     { href: "/admin/patients", label: "ملفات المرضى", icon: Users },
     { href: "/admin/doctors", label: "طاقم الأطباء", icon: Stethoscope },
+    { href: "/admin/staff", label: "الموظفون والإدارة", icon: UserCog },
     { href: "/admin/appointments", label: "إدارة المواعيد", icon: CalendarDays },
     { href: "/admin/invoices", label: "الفواتير", icon: CreditCard },
     { href: "/admin/analytics", label: "التحليلات", icon: BarChart3 },
