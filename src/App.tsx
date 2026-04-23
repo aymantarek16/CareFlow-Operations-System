@@ -14,6 +14,7 @@ import AdminPatients from "./pages/admin/AdminPatients";
 import AdminPatientDetail from "./pages/admin/AdminPatientDetail";
 import AdminDoctors from "./pages/admin/AdminDoctors";
 import AdminDoctorDetail from "./pages/admin/AdminDoctorDetail";
+import AdminStaff from "./pages/admin/AdminStaff";
 import AdminAppointments from "./pages/admin/AdminAppointments";
 import AdminAppointmentDetail from "./pages/admin/AdminAppointmentDetail";
 import AdminInvoices from "./pages/admin/AdminInvoices";
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/admin/patients/:id" element={<AdminPatientDetail />} />
               <Route path="/admin/doctors" element={<AdminDoctors />} />
               <Route path="/admin/doctors/:id" element={<AdminDoctorDetail />} />
+              <Route path="/admin/staff" element={<AdminStaff />} />
               <Route path="/admin/appointments" element={<AdminAppointments />} />
               <Route path="/admin/appointments/:id" element={<AdminAppointmentDetail />} />
               <Route path="/admin/invoices" element={<AdminInvoices />} />
