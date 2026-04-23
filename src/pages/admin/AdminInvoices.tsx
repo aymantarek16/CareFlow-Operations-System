@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
@@ -7,11 +8,12 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useInvoices } from "@/hooks/useData";
 import { formatDate } from "@/lib/helpers";
 import { CreditCard, FileText } from "lucide-react";
+import { CreateInvoiceDialog } from "@/components/invoices/CreateInvoiceDialog";
 
 export default function AdminInvoices() {
-  const { data: invoices, loading } = useInvoices();
+  const { data: invoices, loading, refetch } = useInvoices();
+  const [createOpen, setCreateOpen] = useState(false);
 
-  const totalAmount = invoices.reduce((sum, i) => sum + Number(i.amount || 0), 0);
   const paidAmount = invoices.filter((i) => i.status === "paid").reduce((sum, i) => sum + Number(i.amount || 0), 0);
   const pendingAmount = invoices.filter((i) => i.status === "pending").reduce((sum, i) => sum + Number(i.amount || 0), 0);
 
@@ -39,7 +41,11 @@ export default function AdminInvoices() {
         title={`الفواتير (${invoices.length})`}
         subtitle="جميع الفواتير المسجلة"
         action={
-          <button className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20">
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20"
+          >
             <CreditCard className="h-3.5 w-3.5" />
             فاتورة جديدة
           </button>
@@ -53,7 +59,11 @@ export default function AdminInvoices() {
             title="لا توجد فواتير"
             description="لم يتم إصدار أي فواتير بعد"
             action={
-              <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-background">
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-background"
+              >
                 <FileText className="h-4 w-4" />
                 إنشاء فاتورة
               </button>
@@ -72,6 +82,8 @@ export default function AdminInvoices() {
           />
         )}
       </GlassCard>
+
+      <CreateInvoiceDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={refetch} />
     </div>
   );
 }
