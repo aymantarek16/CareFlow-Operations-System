@@ -8,12 +8,14 @@ import { useAppointments, usePatients, useDoctors } from "@/hooks/useData";
 import { formatDate, formatTime } from "@/lib/helpers";
 import { useState } from "react";
 import { CalendarDays, Filter } from "lucide-react";
+import { CreateAppointmentDialog } from "@/components/appointments/CreateAppointmentDialog";
 
 export default function ReceptionistAppointments() {
-  const { data: appointments, loading } = useAppointments();
+  const { data: appointments, loading, refetch } = useAppointments();
   const { data: patients } = usePatients();
   const { data: doctors } = useDoctors();
   const [filter, setFilter] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
   const pm = new Map(patients.map((p) => [p.id, `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || p.id]));
   const dm = new Map(doctors.map((d) => [d.id, `${d.first_name ?? ""} ${d.last_name ?? ""}`.trim() || d.id]));
   const filtered = filter ? appointments.filter((a) => a.status === filter) : appointments;
@@ -52,7 +54,11 @@ export default function ReceptionistAppointments() {
         title={`المواعيد (${filtered.length})`}
         subtitle="قائمة جميع المواعيد المجدولة"
         action={
-          <button className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20">
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20"
+          >
             <CalendarDays className="h-3.5 w-3.5" />
             موعد جديد
           </button>
@@ -65,6 +71,18 @@ export default function ReceptionistAppointments() {
             variant={filter ? "search" : "data"}
             title="لا توجد مواعيد"
             description={filter ? "لا توجد مواعيد مطابقة للفلتر" : "لم يتم حجز أي مواعيد بعد"}
+            action={
+              filter ? undefined : (
+                <button
+                  type="button"
+                  onClick={() => setCreateOpen(true)}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-background"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  إنشاء أول موعد
+                </button>
+              )
+            }
           />
         ) : (
           <DataTable
@@ -79,6 +97,8 @@ export default function ReceptionistAppointments() {
           />
         )}
       </GlassCard>
+
+      <CreateAppointmentDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={refetch} />
     </div>
   );
 }
