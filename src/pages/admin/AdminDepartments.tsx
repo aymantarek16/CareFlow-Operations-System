@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
@@ -20,7 +21,8 @@ export default function AdminDepartments() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);
   const [editForm, setEditForm] = useState({ name: "", description: "" });
-  
+  useEscapeClose(editModalOpen, () => setEditModalOpen(false));
+
   // Delete state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingDept, setDeletingDept] = useState<Department | null>(null);
@@ -121,7 +123,7 @@ export default function AdminDepartments() {
               variant={search ? "search" : "data"} 
               action={
                 search ? undefined : (
-                  <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-background">
+                  <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-white">
                     <Plus className="h-4 w-4" />
                     إضافة أول قسم
                   </button>
@@ -177,7 +179,7 @@ export default function AdminDepartments() {
               <button 
                 disabled={createLoading}
                 type="submit" 
-                className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-background disabled:opacity-60 flex items-center justify-center gap-2"
+                className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 {createLoading ? (
                   <>

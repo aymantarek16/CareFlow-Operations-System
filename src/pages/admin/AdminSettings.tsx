@@ -91,7 +91,7 @@ export default function AdminSettings() {
             <button
               onClick={handleSave}
               disabled={!hasChanges || loading || updateLoading || createLoading}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-background disabled:opacity-60"
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
             >
               {updateLoading || createLoading ? (
                 <RefreshCw className="h-4 w-4 animate-spin" />

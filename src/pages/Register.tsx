@@ -85,7 +85,7 @@ export default function RegisterPage() {
 
           {error && <p className="text-sm text-rose-400 bg-rose-400/10 rounded-xl px-4 py-2">{error}</p>}
 
-          <button type="submit" disabled={loading} className="h-12 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-background transition hover:brightness-110 disabled:opacity-60">
+          <button type="submit" disabled={loading} className="h-12 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-60">
             {loading ? "جاري الإنشاء..." : "إنشاء حساب"}
           </button>
         </form>

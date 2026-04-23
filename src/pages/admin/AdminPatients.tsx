@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
@@ -24,7 +25,8 @@ export default function AdminPatients() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<PatientProfile | null>(null);
   const [editForm, setEditForm] = useState({ first_name: "", last_name: "", phone: "", gender: "male", date_of_birth: "" });
-  
+  useEscapeClose(editModalOpen, () => setEditModalOpen(false));
+
   // Delete state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingPatient, setDeletingPatient] = useState<PatientProfile | null>(null);
@@ -146,7 +148,7 @@ export default function AdminPatients() {
               variant={search ? "search" : "data"} 
               action={
                 search ? undefined : (
-                  <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-background">
+                  <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-white">
                     <Plus className="h-4 w-4" />
                     إضافة أول مريض
                   </button>
@@ -198,7 +200,7 @@ export default function AdminPatients() {
                 <option value="female">أنثى</option>
               </select>
               <input type="date" value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} required className={inputClass} />
-              <button disabled={creating} type="submit" className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-background disabled:opacity-60 flex items-center justify-center gap-2">
+              <button disabled={creating} type="submit" className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2">
                 {creating ? (
                   <>
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />

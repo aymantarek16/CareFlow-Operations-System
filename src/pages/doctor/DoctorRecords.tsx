@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
@@ -48,6 +49,7 @@ export default function DoctorRecords() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<MedicalRecord | null>(null);
   const [editForm, setEditForm] = useState({ diagnosis: "", notes: "", attachments: "" });
+  useEscapeClose(editModalOpen, () => setEditModalOpen(false));
 
   // Delete state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -247,7 +249,7 @@ export default function DoctorRecords() {
               <button 
                 disabled={createLoading || !doctor}
                 type="submit" 
-                className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-background disabled:opacity-60 flex items-center justify-center gap-2"
+                className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 {createLoading ? (
                   <>
