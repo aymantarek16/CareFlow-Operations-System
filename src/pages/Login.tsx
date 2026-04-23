@@ -175,7 +175,7 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="h-10 md:h-11 rounded-xl md:rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-background transition hover:brightness-110 disabled:opacity-60"
+                    className="h-10 md:h-11 rounded-xl md:rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-60"
                   >
                     {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
                   </button>

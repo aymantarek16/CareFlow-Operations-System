@@ -139,7 +139,7 @@ export default function PatientBookAppointment() {
               <button
                 type="submit"
                 disabled={createLoading || !patient}
-                className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-background disabled:opacity-60 flex items-center justify-center gap-2"
+                className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 {createLoading ? (
                   <>

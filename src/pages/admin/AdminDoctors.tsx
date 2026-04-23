@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
@@ -25,7 +26,8 @@ export default function AdminDoctors() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<DoctorProfile | null>(null);
   const [editForm, setEditForm] = useState({ first_name: "", last_name: "", specialty: "", phone: "" });
-  
+  useEscapeClose(editModalOpen, () => setEditModalOpen(false));
+
   // Delete state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingDoctor, setDeletingDoctor] = useState<DoctorProfile | null>(null);
@@ -147,7 +149,7 @@ export default function AdminDoctors() {
               variant={search ? "search" : "data"} 
               action={
                 search ? undefined : (
-                  <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-background">
+                  <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-white">
                     <Plus className="h-4 w-4" />
                     إضافة أول طبيب
                   </button>
@@ -209,7 +211,7 @@ export default function AdminDoctors() {
                 <input placeholder="التخصص" value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })} required className={inputClass} />
               )}
               <input placeholder="الهاتف" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required className={inputClass} />
-              <button disabled={creating} type="submit" className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-background disabled:opacity-60 flex items-center justify-center gap-2">
+              <button disabled={creating} type="submit" className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2">
                 {creating ? (
                   <>
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />

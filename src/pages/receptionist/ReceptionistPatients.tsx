@@ -59,7 +59,7 @@ export default function ReceptionistPatients() {
                 <button
                   type="button"
                   onClick={() => setCreateOpen(true)}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-background"
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-white"
                 >
                   <UserPlus className="h-4 w-4" />
                   إضافة أول مريض

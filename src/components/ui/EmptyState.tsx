@@ -76,7 +76,7 @@ export function EmptyStateButton({ onClick, children }: EmptyStateButtonProps) {
   return (
     <Button
       onClick={onClick}
-      className="rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-semibold text-background hover:opacity-90"
+      className="rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-semibold text-white hover:opacity-90"
     >
       {children}
     </Button>

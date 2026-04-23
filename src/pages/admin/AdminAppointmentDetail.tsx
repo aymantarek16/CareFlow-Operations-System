@@ -85,7 +85,7 @@ export default function AdminAppointmentDetail() {
             <option value="no-show">لم يحضر</option>
           </select>
           <input placeholder="ملاحظات" value={notes} onChange={(e) => setNotes(e.target.value)} className={inputClass} />
-          <button onClick={handleUpdate} disabled={saving} className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-background disabled:opacity-60">
+          <button onClick={handleUpdate} disabled={saving} className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-white disabled:opacity-60">
             {saving ? "جارٍ الحفظ..." : "حفظ التعديلات"}
           </button>
         </div>

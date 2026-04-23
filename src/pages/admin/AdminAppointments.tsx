@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
@@ -25,7 +26,8 @@ export default function AdminAppointments() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingAppt, setEditingAppt] = useState<AppointmentRecord | null>(null);
   const [editForm, setEditForm] = useState({ status: "", notes: "" });
-  
+  useEscapeClose(editModalOpen, () => setEditModalOpen(false));
+
   // Delete state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingAppt, setDeletingAppt] = useState<AppointmentRecord | null>(null);
@@ -141,7 +143,7 @@ export default function AdminAppointments() {
               variant={search || statusFilter ? "search" : "data"}
               action={
                 (search || statusFilter) ? undefined : (
-                  <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-background">
+                  <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-white">
                     <Plus className="h-4 w-4" />
                     حجز أول موعد
                   </button>
@@ -205,7 +207,7 @@ export default function AdminAppointments() {
               </select>
               <input placeholder="سبب الزيارة" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className={inputClass} />
               <input placeholder="ملاحظات" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputClass} />
-              <button disabled={createLoading} type="submit" className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-background disabled:opacity-60 flex items-center justify-center gap-2">
+              <button disabled={createLoading} type="submit" className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2">
                 {createLoading ? (
                   <>
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />

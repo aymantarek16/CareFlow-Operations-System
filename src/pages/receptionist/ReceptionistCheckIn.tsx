@@ -76,7 +76,7 @@ export default function ReceptionistCheckIn() {
             title="لا توجد مواعيد لليوم"
             description="لا يوجد أي مواعيد مجدولة لليوم"
             action={
-              <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-background">
+              <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-white">
                 <UserCheck className="h-4 w-4" />
                 عرض جميع المواعيد
               </button>

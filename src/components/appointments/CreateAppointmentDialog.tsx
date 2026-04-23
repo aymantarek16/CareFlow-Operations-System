@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { usePatients, useDoctors } from "@/hooks/useData";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { toast } from "sonner";
 import { CalendarPlus, X } from "lucide-react";
 
@@ -64,6 +65,8 @@ export function CreateAppointmentDialog({
       });
     }
   }, [open, defaultPatientId, defaultDoctorId]);
+
+  useEscapeClose(open, () => onOpenChange(false));
 
   if (!open) return null;
 
@@ -248,7 +251,7 @@ export function CreateAppointmentDialog({
             <button
               type="submit"
               disabled={submitting}
-              className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 px-6 text-sm font-bold text-background disabled:opacity-60"
+              className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 px-6 text-sm font-bold text-white disabled:opacity-60"
             >
               {submitting ? (
                 <>

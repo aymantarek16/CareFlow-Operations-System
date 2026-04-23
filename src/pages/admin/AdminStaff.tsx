@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
@@ -59,6 +60,8 @@ export default function AdminStaff() {
     name: "",
     role: "receptionist",
   });
+
+  useEscapeClose(editModalOpen, () => setEditModalOpen(false));
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingStaff, setDeletingStaff] = useState<AppUser | null>(null);

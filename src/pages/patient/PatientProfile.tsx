@@ -172,7 +172,7 @@ export default function PatientProfile() {
                 <button
                   type="submit"
                   disabled={updateLoading}
-                  className="flex-1 h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-background disabled:opacity-60 flex items-center justify-center gap-2"
+                  className="flex-1 h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
                 >
                   <Save className="h-4 w-4" />
                   {updateLoading ? "جاري الحفظ..." : "حفظ التغييرات"}
