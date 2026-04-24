@@ -95,6 +95,19 @@ export type ActivityLog = {
   created_at?: string;
 };
 
+export type NotificationType = "appointment" | "invoice" | "record" | "system" | "info";
+
+export type NotificationRecord = {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: NotificationType | string;
+  related_id: string | null;
+  read: boolean;
+  created_at: string;
+};
+
 export type Prescription = {
   id: string;
   patient_id: string;

@@ -22,6 +22,7 @@ import type { AppRole, AppUser } from "@/lib/types";
 import { RoleBadge } from "@/components/ui/StatusBadge";
 import { cn, getInitials } from "@/lib/helpers";
 import { useAuth } from "@/contexts/AuthContext";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 const NAV: Record<AppRole, { href: string; label: string; icon: typeof LayoutDashboard }[]> = {
   admin: [
@@ -84,17 +85,18 @@ export function AppSidebar({ user }: { user: AppUser }) {
         </div>
 
         {/* User info */}
-        <div className="mt-5 flex items-center gap-4 rounded-[28px] border border-foreground/10 bg-background/50 p-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-400 text-base font-black text-background">
+        <div className="mt-5 flex items-center gap-3 rounded-[28px] border border-foreground/10 bg-background/50 p-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-400 text-base font-black text-background">
             {getInitials(user.name)}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate font-semibold text-foreground">{user.name}</p>
             <p className="truncate text-sm text-foreground/45">{user.email}</p>
             <div className="mt-2">
               <RoleBadge role={user.role} />
             </div>
           </div>
+          <NotificationBell />
         </div>
 
         {/* Nav */}
