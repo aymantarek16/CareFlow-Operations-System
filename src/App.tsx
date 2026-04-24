@@ -39,6 +39,7 @@ import ReceptionistPatients from "./pages/receptionist/ReceptionistPatients";
 import ReceptionistAppointments from "./pages/receptionist/ReceptionistAppointments";
 import ReceptionistCheckIn from "./pages/receptionist/ReceptionistCheckIn";
 import ReceptionistBilling from "./pages/receptionist/ReceptionistBilling";
+import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
 
@@ -99,6 +100,11 @@ const App = () => (
               <Route path="/receptionist/appointments" element={<ReceptionistAppointments />} />
               <Route path="/receptionist/check-in" element={<ReceptionistCheckIn />} />
               <Route path="/receptionist/billing" element={<ReceptionistBilling />} />
+            </Route>
+
+            {/* Shared (all authenticated roles) */}
+            <Route element={<ProtectedRoute allowedRoles={["admin", "doctor", "patient", "receptionist"]}><DashboardLayout /></ProtectedRoute>}>
+              <Route path="/notifications" element={<Notifications />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
