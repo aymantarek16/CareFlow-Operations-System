@@ -12,7 +12,18 @@ import { useDeleteMutation, useUpdateMutation, useInsertMutation } from "@/hooks
 import { formatDate, formatTime } from "@/lib/helpers";
 import type { AppointmentRecord } from "@/lib/types";
 import { Link } from "react-router-dom";
-import { Pencil, Trash2, Plus, Search, CalendarPlus } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, CalendarPlus, Download } from "lucide-react";
+import { toast } from "sonner";
+import { generatePdfReport } from "@/lib/pdf";
+
+const APPT_STATUS_LABEL: Record<string, string> = {
+  scheduled: "مجدول",
+  "checked-in": "تم التسجيل",
+  "in-progress": "قيد التنفيذ",
+  completed: "مكتمل",
+  cancelled: "ملغى",
+  "no-show": "لم يحضر",
+};
 
 export default function AdminAppointments() {
   const { data: appointments, loading, refetch } = useAppointments();
@@ -97,6 +108,38 @@ export default function AdminAppointments() {
     deleteAppt(deletingAppt.id);
   };
 
+  const [exporting, setExporting] = useState(false);
+  const exportPdf = async () => {
+    setExporting(true);
+    try {
+      await generatePdfReport({
+        title: "تقرير المواعيد",
+        subtitle:
+          (statusFilter ? `حالة: ${APPT_STATUS_LABEL[statusFilter] ?? statusFilter}` : "كل المواعيد") +
+          (search ? ` — بحث: ${search}` : ""),
+        filename: `appointments-${new Date().toISOString().slice(0, 10)}`,
+        meta: [{ label: "عدد المواعيد", value: filtered.length }],
+        table: {
+          columns: ["المريض", "الطبيب", "التاريخ", "الوقت", "الحالة", "السبب", "ملاحظات"],
+          rows: filtered.map((a) => [
+            patientMap.get(a.patient_id) ?? "-",
+            doctorMap.get(a.doctor_id) ?? "-",
+            formatDate(a.appointment_date),
+            formatTime(a.appointment_time),
+            APPT_STATUS_LABEL[a.status ?? ""] ?? a.status ?? "-",
+            a.reason ?? "-",
+            a.notes ?? "-",
+          ]),
+        },
+      });
+      toast.success("تم تحميل التقرير");
+    } catch {
+      toast.error("تعذّر إنشاء ملف PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const inputClass = "h-12 w-full rounded-2xl border border-foreground/10 bg-foreground/5 px-4 text-sm text-foreground outline-none transition focus:border-primary/50";
   const selectClass = inputClass + " bg-[#0b1f19]";
 
@@ -130,10 +173,21 @@ export default function AdminAppointments() {
           title={`المواعيد (${filtered.length})`} 
           subtitle="جدول تشغيلي مباشر"
           action={
-            <button className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20">
-              <CalendarPlus className="h-3.5 w-3.5" />
-              حجز موعد
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={exportPdf}
+                disabled={exporting || filtered.length === 0}
+                className="flex items-center gap-2 rounded-xl bg-foreground/5 px-3 py-2 text-xs font-semibold text-foreground/80 hover:bg-foreground/10 disabled:opacity-50"
+              >
+                <Download className="h-3.5 w-3.5" />
+                {exporting ? "جاري التصدير..." : "تصدير PDF"}
+              </button>
+              <button className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20">
+                <CalendarPlus className="h-3.5 w-3.5" />
+                حجز موعد
+              </button>
+            </div>
           }
         >
           {loading ? (
