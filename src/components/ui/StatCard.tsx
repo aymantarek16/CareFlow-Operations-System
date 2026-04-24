@@ -1,18 +1,72 @@
 import { LucideIcon, Activity, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/helpers";
 
-const tones = {
-  emerald:
-    "text-emerald-300 border-emerald-400/20 from-emerald-400/20 via-emerald-300/8 to-transparent",
-  cyan:
-    "text-cyan-300 border-cyan-400/20 from-cyan-400/20 via-cyan-300/8 to-transparent",
-  violet:
-    "text-violet-300 border-violet-400/20 from-violet-400/20 via-violet-300/8 to-transparent",
-  amber:
-    "text-amber-300 border-amber-400/20 from-amber-400/20 via-amber-300/8 to-transparent",
-  rose:
-    "text-rose-300 border-rose-400/20 from-rose-400/20 via-rose-300/8 to-transparent",
-} as const;
+type ToneStyles = {
+  /** Strong accent color used for icon text + accent bar + dot. */
+  accent: string;
+  /** Background gradient inside the icon tile (strong). */
+  iconBg: string;
+  /** Ambient glow behind the icon tile. */
+  iconGlow: string;
+  /** Top-left colored halo inside the card. */
+  topGlow: string;
+  /** Border color of the card itself. */
+  border: string;
+  /** Progress / accent bar color. */
+  bar: string;
+  /** Small colored label pill tint. */
+  pill: string;
+};
+
+const TONE_STYLES: Record<string, ToneStyles> = {
+  emerald: {
+    accent: "text-emerald-300",
+    iconBg: "bg-gradient-to-br from-emerald-400 to-teal-500",
+    iconGlow: "bg-emerald-400/30",
+    topGlow: "from-emerald-400/25 via-emerald-400/5",
+    border: "border-emerald-400/25",
+    bar: "from-emerald-400 to-teal-500",
+    pill: "bg-emerald-400/10 text-emerald-300 ring-emerald-400/20",
+  },
+  cyan: {
+    accent: "text-cyan-300",
+    iconBg: "bg-gradient-to-br from-cyan-400 to-sky-500",
+    iconGlow: "bg-cyan-400/30",
+    topGlow: "from-cyan-400/25 via-cyan-400/5",
+    border: "border-cyan-400/25",
+    bar: "from-cyan-400 to-sky-500",
+    pill: "bg-cyan-400/10 text-cyan-300 ring-cyan-400/20",
+  },
+  violet: {
+    accent: "text-violet-300",
+    iconBg: "bg-gradient-to-br from-violet-400 to-fuchsia-500",
+    iconGlow: "bg-violet-400/30",
+    topGlow: "from-violet-400/25 via-violet-400/5",
+    border: "border-violet-400/25",
+    bar: "from-violet-400 to-fuchsia-500",
+    pill: "bg-violet-400/10 text-violet-300 ring-violet-400/20",
+  },
+  amber: {
+    accent: "text-amber-300",
+    iconBg: "bg-gradient-to-br from-amber-400 to-orange-500",
+    iconGlow: "bg-amber-400/30",
+    topGlow: "from-amber-400/25 via-amber-400/5",
+    border: "border-amber-400/25",
+    bar: "from-amber-400 to-orange-500",
+    pill: "bg-amber-400/10 text-amber-300 ring-amber-400/20",
+  },
+  rose: {
+    accent: "text-rose-300",
+    iconBg: "bg-gradient-to-br from-rose-400 to-pink-500",
+    iconGlow: "bg-rose-400/30",
+    topGlow: "from-rose-400/25 via-rose-400/5",
+    border: "border-rose-400/25",
+    bar: "from-rose-400 to-pink-500",
+    pill: "bg-rose-400/10 text-rose-300 ring-rose-400/20",
+  },
+};
+
+export type StatTone = keyof typeof TONE_STYLES;
 
 export function StatCard({
   title,
@@ -20,84 +74,115 @@ export function StatCard({
   hint,
   tone = "emerald",
   icon: Icon = Activity,
+  badge,
 }: {
   title: string;
   value: string | number;
   hint: string;
-  tone?: keyof typeof tones;
+  tone?: StatTone;
   icon?: LucideIcon;
+  /** Optional small pill label (e.g. "اليوم"، "زيادة"). */
+  badge?: string;
 }) {
+  const t = TONE_STYLES[tone] ?? TONE_STYLES.emerald;
+
   return (
     <article
-      className="
-        group relative overflow-hidden rounded-[28px] border border-white/10
-        bg-[linear-gradient(180deg,rgba(14,23,36,0.94)_0%,rgba(7,14,24,0.98)_100%)]
-        p-5 lg:p-6
-        shadow-[0_10px_40px_rgba(0,0,0,0.28)]
-        transition-all duration-300 ease-out
-        hover:-translate-y-1.5
-        hover:border-white/15
-        hover:shadow-[0_18px_60px_rgba(0,0,0,0.42)]
-      "
+      className={cn(
+        "group relative isolate overflow-hidden rounded-[24px] border p-5 lg:p-6",
+        "bg-[linear-gradient(160deg,rgba(11,22,34,0.98)_0%,rgba(6,12,20,1)_100%)]",
+        "shadow-[0_12px_32px_-12px_rgba(0,0,0,0.5)]",
+        "transition-all duration-300 ease-out",
+        "hover:-translate-y-1 hover:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.55)]",
+        t.border,
+      )}
     >
+      {/* Top accent bar — strong tone color so each card is instantly identifiable */}
       <div
         className={cn(
-          "absolute inset-x-0 top-0 h-24 bg-gradient-to-r opacity-80 blur-3xl transition-opacity duration-300 group-hover:opacity-100",
-          tones[tone]
+          "absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r",
+          t.bar,
         )}
       />
 
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_32%)] opacity-60" />
-      <div className="absolute inset-0 rounded-[28px] ring-1 ring-inset ring-white/5" />
+      {/* Soft colored glow in the corner */}
+      <div
+        className={cn(
+          "pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full blur-3xl opacity-40",
+          t.iconGlow,
+        )}
+      />
 
       <div className="relative flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="mb-4 flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          {/* Title row with small tone dot */}
+          <div className="flex items-center gap-2">
             <span
               className={cn(
-                "h-2 w-2 rounded-full shadow-[0_0_18px_currentColor]",
-                tones[tone].split(" ")[0]
+                "inline-block h-1.5 w-1.5 rounded-full",
+                t.iconBg,
               )}
             />
-            <p className="text-sm font-medium tracking-wide text-foreground/60">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-foreground/55">
               {title}
             </p>
+            {badge && (
+              <span
+                className={cn(
+                  "ms-auto rounded-full px-2 py-0.5 text-[10px] font-bold ring-1",
+                  t.pill,
+                )}
+              >
+                {badge}
+              </span>
+            )}
           </div>
 
-          <p className="text-3xl font-black tracking-tight text-white lg:text-4xl">
+          {/* Value */}
+          <p
+            className={cn(
+              "mt-3 text-4xl font-black leading-none tracking-tight text-white lg:text-[42px]",
+            )}
+          >
             {value}
           </p>
 
-          <div className="mt-4 flex items-center gap-2 text-xs text-foreground/50">
-            <TrendingUp size={14} className="opacity-70" />
-            <p className="leading-6">{hint}</p>
+          {/* Hint */}
+          <div className="mt-4 flex items-center gap-1.5 text-xs text-foreground/55">
+            <TrendingUp size={13} className={t.accent} />
+            <p className="truncate leading-5">{hint}</p>
           </div>
         </div>
 
-        <div
-          className={cn(
-            "relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border bg-white/[0.03] backdrop-blur-md transition-all duration-300",
-            "group-hover:scale-105 group-hover:-translate-y-0.5",
-            tones[tone]
-          )}
-        >
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent opacity-70" />
-          <Icon size={22} className="relative" />
+        {/* Icon tile — big, colored, high-contrast */}
+        <div className="relative shrink-0">
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-0 rounded-2xl blur-xl opacity-60",
+              t.iconGlow,
+            )}
+          />
+          <div
+            className={cn(
+              "relative flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-lg",
+              "ring-1 ring-white/15",
+              "transition-transform duration-300 group-hover:scale-105",
+              t.iconBg,
+            )}
+          >
+            <Icon size={24} strokeWidth={2.25} />
+          </div>
         </div>
       </div>
 
-      <div className="relative mt-5 h-px w-full bg-white/8">
+      {/* Bottom animated accent line */}
+      <div className="relative mt-5 h-[2px] w-full overflow-hidden rounded-full bg-white/5">
         <div
           className={cn(
-            "h-full w-24 bg-gradient-to-r transition-all duration-300 group-hover:w-32",
-            tones[tone]
+            "h-full w-12 bg-gradient-to-r transition-[width] duration-500 group-hover:w-full",
+            t.bar,
           )}
         />
-      </div>
-
-      <div className="pointer-events-none absolute inset-0 rounded-[28px] opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-        <div className="absolute -left-10 top-10 h-24 w-24 rounded-full bg-white/5 blur-2xl" />
-        <div className="absolute -right-8 bottom-6 h-20 w-20 rounded-full bg-white/5 blur-2xl" />
       </div>
     </article>
   );

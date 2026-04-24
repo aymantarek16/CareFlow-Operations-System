@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { Bell, CalendarDays, CreditCard, FileText, Info, Check, Trash2, CheckCheck } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -55,23 +56,77 @@ function relatedRouteFor(
     case "record":
       if (role === "doctor") return `/doctor/records`;
       if (role === "patient") return `/patient/records`;
-      if (role === "admin") return null;
       return null;
     default:
       return null;
   }
 }
 
+type PanelPosition = { top: number; left: number };
+
+/**
+ * Compute the panel's top-left corner so it stays inside the viewport
+ * regardless of the trigger's position (inside a clipped sidebar, near
+ * the edge of the screen, etc.).
+ */
+function computePanelPosition(
+  trigger: DOMRect,
+  panelWidth: number,
+  panelHeight: number,
+  gap = 10,
+): PanelPosition {
+  const viewportW = window.innerWidth;
+  const viewportH = window.innerHeight;
+  const margin = 12;
+
+  // Try to align to the start (right edge in RTL). Clamp inside viewport.
+  let left = trigger.right - panelWidth;
+  if (left < margin) left = margin;
+  if (left + panelWidth > viewportW - margin) {
+    left = viewportW - panelWidth - margin;
+  }
+
+  // Prefer opening below the trigger.
+  let top = trigger.bottom + gap;
+  if (top + panelHeight > viewportH - margin) {
+    // Otherwise open above.
+    top = Math.max(margin, trigger.top - panelHeight - gap);
+  }
+
+  return { top, left };
+}
+
 export function NotificationBell() {
   const { appUser } = useAuth();
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<PanelPosition | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
 
+  const PANEL_WIDTH = 380;
+  const PANEL_MAX_HEIGHT = 520;
+
   const { items, unreadCount, markRead, markAllRead, remove, loading } = useNotifications(30_000);
 
   useEscapeClose(open, () => setOpen(false));
+
+  // Position the panel once it opens and on viewport changes.
+  useLayoutEffect(() => {
+    if (!open || !buttonRef.current) return;
+    const update = () => {
+      if (!buttonRef.current) return;
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPos(computePanelPosition(rect, PANEL_WIDTH, PANEL_MAX_HEIGHT));
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -96,31 +151,29 @@ export function NotificationBell() {
     }
   };
 
-  return (
-    <div className="relative">
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-label="الإشعارات"
-        className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-foreground/10 bg-foreground/5 text-foreground/80 transition hover:bg-foreground/10"
-      >
-        <Bell className="h-5 w-5" />
-        {unreadCount > 0 && (
-          <span className="absolute -end-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-lg">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </button>
-
-      {open && (
+  const panel = open && pos
+    ? createPortal(
         <div
           ref={panelRef}
-          className="absolute end-0 top-full z-50 mt-2 flex max-h-[520px] w-[360px] flex-col overflow-hidden rounded-3xl border border-foreground/10 bg-[#0b1f19] shadow-2xl"
+          role="dialog"
+          aria-label="الإشعارات"
+          style={{
+            position: "fixed",
+            top: pos.top,
+            left: pos.left,
+            width: PANEL_WIDTH,
+            maxHeight: PANEL_MAX_HEIGHT,
+            zIndex: 1000,
+          }}
+          className="flex flex-col overflow-hidden rounded-3xl border border-foreground/15 bg-[#0b1f19] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.85)] backdrop-blur"
+          dir="rtl"
         >
-          <div className="flex items-center justify-between gap-3 border-b border-foreground/10 p-4">
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">الإشعارات</h3>
+          <div className="flex items-center justify-between gap-3 border-b border-foreground/10 bg-foreground/[0.02] p-4">
+            <div className="min-w-0">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Bell className="h-4 w-4 text-primary" />
+                الإشعارات
+              </h3>
               <p className="mt-0.5 text-xs text-foreground/50">
                 {unreadCount > 0 ? `${unreadCount} إشعار غير مقروء` : "لا إشعارات جديدة"}
               </p>
@@ -129,7 +182,7 @@ export function NotificationBell() {
               <button
                 type="button"
                 onClick={markAllRead}
-                className="flex items-center gap-1 rounded-xl bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary hover:bg-primary/20"
+                className="flex shrink-0 items-center gap-1 rounded-xl bg-primary/10 px-2.5 py-1.5 text-[11px] font-semibold text-primary hover:bg-primary/20"
                 title="تعليم الكل كمقروء"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
@@ -142,9 +195,12 @@ export function NotificationBell() {
             {loading && items.length === 0 ? (
               <div className="p-6 text-center text-xs text-foreground/50">جار التحميل...</div>
             ) : items.length === 0 ? (
-              <div className="p-8 text-center">
-                <Bell className="mx-auto h-8 w-8 text-foreground/20" />
-                <p className="mt-2 text-xs text-foreground/50">لا توجد إشعارات</p>
+              <div className="p-10 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-foreground/5">
+                  <Bell className="h-6 w-6 text-foreground/30" />
+                </div>
+                <p className="mt-3 text-sm font-semibold text-foreground/70">لا توجد إشعارات</p>
+                <p className="mt-1 text-xs text-foreground/40">ستظهر الإشعارات هنا عند وصولها</p>
               </div>
             ) : (
               <ul className="divide-y divide-foreground/5">
@@ -152,8 +208,8 @@ export function NotificationBell() {
                   <li
                     key={n.id}
                     className={cn(
-                      "group relative flex gap-3 px-4 py-3 transition hover:bg-foreground/[0.03]",
-                      !n.read && "bg-primary/[0.04]",
+                      "group relative flex gap-3 px-4 py-3 transition hover:bg-foreground/[0.04]",
+                      !n.read && "bg-primary/[0.05]",
                     )}
                   >
                     <button
@@ -161,15 +217,15 @@ export function NotificationBell() {
                       onClick={() => onItemClick(n)}
                       className="flex flex-1 items-start gap-3 text-start"
                     >
-                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-foreground/5">
+                      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-foreground/5">
                         {iconFor(n.type)}
                       </span>
                       <span className="flex-1 min-w-0">
                         <span className="flex items-center gap-2">
                           <span className="truncate text-sm font-semibold text-foreground">{n.title}</span>
-                          {!n.read && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
+                          {!n.read && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_8px_currentColor]" />}
                         </span>
-                        <span className="mt-0.5 block line-clamp-2 text-xs text-foreground/60">{n.message}</span>
+                        <span className="mt-0.5 block line-clamp-2 text-xs leading-5 text-foreground/60">{n.message}</span>
                         <span className="mt-1 block text-[10px] text-foreground/40">{formatRelative(n.created_at)}</span>
                       </span>
                     </button>
@@ -199,22 +255,40 @@ export function NotificationBell() {
             )}
           </div>
 
-          {items.length > 0 && (
-            <div className="border-t border-foreground/10 p-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  navigate("/notifications");
-                }}
-                className="block w-full rounded-xl py-2 text-center text-xs font-semibold text-primary hover:bg-primary/10"
-              >
-                عرض كل الإشعارات
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+          <div className="border-t border-foreground/10 bg-foreground/[0.02] p-2">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                navigate("/notifications");
+              }}
+              className="block w-full rounded-xl py-2 text-center text-xs font-semibold text-primary hover:bg-primary/10"
+            >
+              عرض كل الإشعارات
+            </button>
+          </div>
+        </div>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="الإشعارات"
+        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-foreground/10 bg-foreground/5 text-foreground/80 transition hover:bg-foreground/10 hover:text-foreground"
+      >
+        <Bell className="h-5 w-5" />
+        {unreadCount > 0 && (
+          <span className="absolute -end-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-lg ring-2 ring-[#071410]">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
+      </button>
+      {panel}
+    </>
   );
 }
