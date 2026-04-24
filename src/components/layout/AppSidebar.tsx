@@ -16,6 +16,7 @@ import {
   LogOut,
   Building2,
   UserCog,
+  Database,
 } from "lucide-react";
 import type { AppRole, AppUser } from "@/lib/types";
 import { RoleBadge } from "@/components/ui/StatusBadge";
@@ -33,6 +34,7 @@ const NAV: Record<AppRole, { href: string; label: string; icon: typeof LayoutDas
     { href: "/admin/invoices", label: "الفواتير والمدفوعات", icon: CreditCard },
     { href: "/admin/analytics", label: "التحليلات", icon: BarChart3 },
     { href: "/admin/activity", label: "سجل النشاط", icon: Clock },
+    { href: "/admin/backup", label: "النسخ الاحتياطي", icon: Database },
     { href: "/admin/settings", label: "الإعدادات", icon: Settings },
   ],
   doctor: [
