@@ -75,7 +75,7 @@ export function AppSidebar({ user }: { user: AppUser }) {
           <div className="relative flex items-start justify-between gap-3">
             <div>
               <h1 className="text-2xl font-black text-foreground">CareFlow</h1>
-              <p className="mt-2 text-sm leading-7 text-foreground/55">نظام إدارة العيادات والمراكز الطبية</p>
+              <p className="mt-2 text-sm leading-7 text-foreground/55">لإدارة العيادات والمراكز الطبية</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl">
               <img src="/careflow.png" alt="CareFlow" className="h-full w-full object-cover" />

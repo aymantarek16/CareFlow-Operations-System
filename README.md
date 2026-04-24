@@ -218,7 +218,7 @@ CareFlow Medical Operations/
 ├── src/
 │   ├── components/
 │   │   ├── auth/           # ProtectedRoute, RoleRoute
-│   │   ├── layout/         # AppLayout, Sidebar, Topbar
+│   │   ├── layout/         # AppLayout, Sidebar
 │   │   └── ui/             # Reusable UI components
 │   │       ├── ConfirmDialog.tsx
 │   │       ├── DataTable.tsx

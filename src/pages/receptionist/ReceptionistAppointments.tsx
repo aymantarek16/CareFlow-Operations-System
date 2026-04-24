@@ -7,8 +7,19 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useAppointments, usePatients, useDoctors } from "@/hooks/useData";
 import { formatDate, formatTime } from "@/lib/helpers";
 import { useState } from "react";
-import { CalendarDays, Filter } from "lucide-react";
+import { CalendarDays, Filter, Download } from "lucide-react";
+import { toast } from "sonner";
+import { generatePdfReport } from "@/lib/pdf";
 import { CreateAppointmentDialog } from "@/components/appointments/CreateAppointmentDialog";
+
+const APPT_STATUS_LABEL: Record<string, string> = {
+  scheduled: "مجدول",
+  "checked-in": "تم التسجيل",
+  "in-progress": "قيد التنفيذ",
+  completed: "مكتمل",
+  cancelled: "ملغى",
+  "no-show": "لم يحضر",
+};
 
 export default function ReceptionistAppointments() {
   const { data: appointments, loading, refetch } = useAppointments();
@@ -16,9 +27,38 @@ export default function ReceptionistAppointments() {
   const { data: doctors } = useDoctors();
   const [filter, setFilter] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const pm = new Map(patients.map((p) => [p.id, `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || p.id]));
   const dm = new Map(doctors.map((d) => [d.id, `${d.first_name ?? ""} ${d.last_name ?? ""}`.trim() || d.id]));
   const filtered = filter ? appointments.filter((a) => a.status === filter) : appointments;
+
+  const exportPdf = async () => {
+    setExporting(true);
+    try {
+      await generatePdfReport({
+        title: "تقرير المواعيد",
+        subtitle: filter ? `حالة: ${APPT_STATUS_LABEL[filter] ?? filter}` : "كل المواعيد",
+        filename: `appointments-${new Date().toISOString().slice(0, 10)}`,
+        meta: [{ label: "عدد المواعيد", value: filtered.length }],
+        table: {
+          columns: ["المريض", "الطبيب", "التاريخ", "الوقت", "الحالة", "السبب"],
+          rows: filtered.map((a) => [
+            pm.get(a.patient_id) ?? "-",
+            dm.get(a.doctor_id) ?? "-",
+            formatDate(a.appointment_date),
+            formatTime(a.appointment_time),
+            APPT_STATUS_LABEL[a.status ?? ""] ?? a.status ?? "-",
+            a.reason ?? "-",
+          ]),
+        },
+      });
+      toast.success("تم تحميل التقرير");
+    } catch {
+      toast.error("تعذّر إنشاء ملف PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const inputClass = "h-12 w-full rounded-2xl border border-foreground/10 bg-foreground/5 px-4 text-sm text-foreground outline-none transition focus:border-primary/50";
   const selectClass = inputClass + " bg-[#0b1f19]";
@@ -54,14 +94,25 @@ export default function ReceptionistAppointments() {
         title={`المواعيد (${filtered.length})`}
         subtitle="قائمة جميع المواعيد المجدولة"
         action={
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20"
-          >
-            <CalendarDays className="h-3.5 w-3.5" />
-            موعد جديد
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={exportPdf}
+              disabled={exporting || filtered.length === 0}
+              className="flex items-center gap-2 rounded-xl bg-foreground/5 px-3 py-2 text-xs font-semibold text-foreground/80 hover:bg-foreground/10 disabled:opacity-50"
+            >
+              <Download className="h-3.5 w-3.5" />
+              {exporting ? "جاري التصدير..." : "تصدير PDF"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20"
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              موعد جديد
+            </button>
+          </div>
         }
       >
         {loading ? (
