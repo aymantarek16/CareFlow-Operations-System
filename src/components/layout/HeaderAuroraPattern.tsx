@@ -4,19 +4,28 @@ import { cn } from "@/lib/helpers";
 /**
  * HeaderAuroraPattern
  * -------------------
- * A minimal, elegant decorative background for page headers. Designed to
- * suggest "modern medical tech" without competing with the content.
+ * A minimal "medical grid" decorative layer for page headers. Designed
+ * for professional medical / SaaS dashboards — organized, clean, almost
+ * static. Never competes with the heading text.
  *
- * Layers (from back to front):
- *   1. A single soft corner glow that slowly breathes.
- *   2. Two thin flowing light waves (smooth sine curves) that drift.
- *   3. A few tiny twinkling specks — optional, only on ≥ md screens.
+ * Composition (back → front):
+ *   1. A single soft radial glow in the corner (very low opacity, slow pulse).
+ *   2. A precise line grid (2 orthogonal line sets) in the same tone.
+ *   3. A sparse dot lattice over the grid intersections to add depth.
+ *   4. A subtle highlight stripe that drifts horizontally very slowly
+ *      across the grid, suggesting a "scan" without being distracting.
  *
- * Everything is confined to the start-edge of the container (left in LTR,
- * right in RTL) via a horizontal mask that fades to transparent by the
- * middle, so the heading text on the opposite side always stays crisp.
+ * Confined to the start-edge of the container via a horizontal mask so
+ * the grid fades to transparent by the middle of the header.
  *
- * Usage:
+ * Props
+ * -----
+ * - className    extra classes for the wrapper
+ * - intensity    "soft" (default) | "medium" — overall opacity scaler
+ * - color        "emerald" | "cyan" | "mixed" (default)
+ *
+ * Usage
+ * -----
  *   <header className="relative overflow-hidden">
  *     <HeaderAuroraPattern />
  *     <div className="relative z-10">…header content…</div>
@@ -31,37 +40,29 @@ export interface HeaderAuroraPatternProps {
   color?: ColorScheme;
 }
 
-const PALETTE: Record<ColorScheme, { glow: string; line1: string; line2: string; spark: string }> = {
+const PALETTE: Record<ColorScheme, { line: string; dot: string; glow: string; scan: string }> = {
   emerald: {
-    glow:  "rgba(52,211,153,0.35)",
-    line1: "#34d399",
-    line2: "#6ee7b7",
-    spark: "#6ee7b7",
+    line: "rgba(52,211,153,1)",
+    dot:  "rgba(110,231,183,1)",
+    glow: "rgba(52,211,153,0.22)",
+    scan: "rgba(110,231,183,0.12)",
   },
   cyan: {
-    glow:  "rgba(34,211,238,0.32)",
-    line1: "#22d3ee",
-    line2: "#67e8f9",
-    spark: "#67e8f9",
+    line: "rgba(34,211,238,1)",
+    dot:  "rgba(103,232,249,1)",
+    glow: "rgba(34,211,238,0.22)",
+    scan: "rgba(103,232,249,0.12)",
   },
   mixed: {
-    glow:  "rgba(52,211,153,0.32)",
-    line1: "#34d399",
-    line2: "#22d3ee",
-    spark: "#6ee7b7",
+    line: "rgba(52,211,153,1)",
+    dot:  "rgba(103,232,249,1)",
+    glow: "rgba(52,211,153,0.2)",
+    scan: "rgba(103,232,249,0.12)",
   },
 };
 
-const MULT: Record<Intensity, number> = { soft: 0.75, medium: 1 };
-
-// Deterministic tiny specks — stable between renders, no layout jitter.
-const SPARKS = [
-  { x: 8,  y: 28, delay: 0.0, duration: 4.5 },
-  { x: 16, y: 68, delay: 1.2, duration: 5.2 },
-  { x: 24, y: 20, delay: 2.0, duration: 4.0 },
-  { x: 32, y: 58, delay: 0.6, duration: 5.8 },
-  { x: 13, y: 85, delay: 2.8, duration: 4.8 },
-];
+// Overall opacity ceiling per intensity — keep everything very subtle.
+const MULT: Record<Intensity, number> = { soft: 1, medium: 1.45 };
 
 export function HeaderAuroraPattern({
   className,
@@ -71,6 +72,14 @@ export function HeaderAuroraPattern({
   const p = PALETTE[color];
   const k = MULT[intensity];
 
+  // Per-layer opacities — stay inside 0.03–0.1 range the brief asks for.
+  const op = {
+    grid: 0.07 * k, // 0.07 soft / 0.10 medium
+    dots: 0.12 * k, // tiny dots, slightly more visible but still faint
+    glow: 0.55 * k, // only the radial gradient inside — the fill is already 0.22 alpha
+    scan: 0.7  * k,
+  };
+
   return (
     <div
       aria-hidden
@@ -79,127 +88,69 @@ export function HeaderAuroraPattern({
         className,
       )}
       style={{
-        // Confine the whole pattern to the start-edge ~42% and fade it out.
-        // `mask-image` is inherited by every child, so each layer below
-        // respects the fade without having to redeclare it.
+        // Fade the whole pattern out by ~60% width so text on the other
+        // side stays perfectly readable.
         WebkitMaskImage:
-          "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.95) 28%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0) 100%)",
+          "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.95) 25%, rgba(0,0,0,0.45) 58%, rgba(0,0,0,0) 100%)",
         maskImage:
-          "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.95) 28%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0) 100%)",
+          "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.95) 25%, rgba(0,0,0,0.45) 58%, rgba(0,0,0,0) 100%)",
       }}
     >
       {/* 1 — breathing corner glow -------------------------------------- */}
       <motion.div
-        className="absolute -top-20 -left-24 h-[420px] w-[420px] rounded-full blur-[80px]"
+        className="absolute -top-24 -left-28 h-[460px] w-[460px] rounded-full blur-[90px]"
         style={{
-          background: `radial-gradient(circle at 35% 35%, ${p.glow}, transparent 65%)`,
-          opacity: 0.5 * k,
+          background: `radial-gradient(circle at 30% 30%, ${p.glow}, transparent 65%)`,
           willChange: "opacity, transform",
         }}
+        initial={{ opacity: 0.35 * k, scale: 1 }}
         animate={{
-          opacity: [0.35 * k, 0.55 * k, 0.35 * k],
-          scale: [1, 1.05, 1],
+          opacity: [0.3 * k, op.glow * 0.75, 0.3 * k],
+          scale: [1, 1.03, 1],
         }}
-        transition={{
-          duration: 9,
-          ease: "easeInOut",
-          repeat: Infinity,
+        transition={{ duration: 12, ease: "easeInOut", repeat: Infinity }}
+      />
+
+      {/* 2 — line grid --------------------------------------------------- */}
+      <div
+        className="absolute inset-0"
+        style={{
+          opacity: op.grid,
+          backgroundImage: `
+            linear-gradient(to right, ${p.line} 1px, transparent 1px),
+            linear-gradient(to bottom, ${p.line} 1px, transparent 1px)
+          `,
+          backgroundSize: "44px 44px, 44px 44px",
+          backgroundPosition: "0 0, 0 0",
         }}
       />
 
-      {/* 2 — flowing light waves (two thin smooth lines) ---------------- */}
-      <svg
-        className="absolute inset-0 h-full w-full"
-        viewBox="0 0 800 240"
-        preserveAspectRatio="none"
-      >
-        <defs>
-          <linearGradient id="auroraLine1" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stopColor={p.line1} stopOpacity="0" />
-            <stop offset="30%"  stopColor={p.line1} stopOpacity={0.9 * k} />
-            <stop offset="70%"  stopColor={p.line2} stopOpacity={0.4 * k} />
-            <stop offset="100%" stopColor={p.line2} stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="auroraLine2" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stopColor={p.line2} stopOpacity="0" />
-            <stop offset="35%"  stopColor={p.line2} stopOpacity={0.7 * k} />
-            <stop offset="75%"  stopColor={p.line1} stopOpacity={0.28 * k} />
-            <stop offset="100%" stopColor={p.line1} stopOpacity="0" />
-          </linearGradient>
-          <filter id="auroraSoftBlur" x="-10%" y="-10%" width="120%" height="120%">
-            <feGaussianBlur stdDeviation="2.2" />
-          </filter>
-        </defs>
+      {/* 3 — dot lattice over the grid intersections --------------------- */}
+      <div
+        className="absolute inset-0"
+        style={{
+          opacity: op.dots,
+          backgroundImage: `radial-gradient(${p.dot} 1px, transparent 1.4px)`,
+          backgroundSize: "44px 44px",
+          backgroundPosition: "0 0",
+        }}
+      />
 
-        {/* Front line — travels top→bottom slowly */}
-        <motion.path
-          d="M0,110 C120,70 240,150 360,110 C480,70 580,130 700,100"
-          fill="none"
-          stroke="url(#auroraLine1)"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          filter="url(#auroraSoftBlur)"
-          animate={{
-            d: [
-              "M0,110 C120,70 240,150 360,110 C480,70 580,130 700,100",
-              "M0,120 C120,90 240,130 360,100 C480,80 580,145 700,110",
-              "M0,110 C120,70 240,150 360,110 C480,70 580,130 700,100",
-            ],
-          }}
-          transition={{
-            duration: 16,
-            ease: "easeInOut",
-            repeat: Infinity,
-          }}
-        />
-
-        {/* Back line — wider arc, slower */}
-        <motion.path
-          d="M0,160 C140,120 280,200 420,150 C540,110 620,170 760,140"
-          fill="none"
-          stroke="url(#auroraLine2)"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-          filter="url(#auroraSoftBlur)"
-          animate={{
-            d: [
-              "M0,160 C140,120 280,200 420,150 C540,110 620,170 760,140",
-              "M0,155 C140,135 280,180 420,160 C540,130 620,180 760,150",
-              "M0,160 C140,120 280,200 420,150 C540,110 620,170 760,140",
-            ],
-          }}
-          transition={{
-            duration: 20,
-            ease: "easeInOut",
-            repeat: Infinity,
-          }}
-        />
-      </svg>
-
-      {/* 3 — a handful of tiny specks ----------------------------------- */}
-      <div className="absolute inset-0 hidden md:block">
-        {SPARKS.map((s, i) => (
-          <motion.span
-            key={i}
-            className="absolute rounded-full"
-            style={{
-              left: `${s.x}%`,
-              top: `${s.y}%`,
-              width: 2,
-              height: 2,
-              backgroundColor: p.spark,
-              boxShadow: `0 0 6px ${p.spark}`,
-            }}
-            animate={{ opacity: [0, 0.6 * k, 0], scale: [0.7, 1.1, 0.7] }}
-            transition={{
-              duration: s.duration,
-              delay: s.delay,
-              ease: "easeInOut",
-              repeat: Infinity,
-            }}
-          />
-        ))}
-      </div>
+      {/* 4 — slow horizontal scan sheen --------------------------------- */}
+      <motion.div
+        className="absolute inset-y-0 -left-1/4 w-1/2"
+        style={{
+          background: `linear-gradient(100deg, transparent 0%, ${p.scan} 50%, transparent 100%)`,
+          filter: "blur(18px)",
+          willChange: "transform, opacity",
+        }}
+        initial={{ x: "-20%", opacity: 0 }}
+        animate={{
+          x: ["-20%", "85%", "-20%"],
+          opacity: [0, op.scan, 0],
+        }}
+        transition={{ duration: 22, ease: "easeInOut", repeat: Infinity }}
+      />
     </div>
   );
 }
