@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { splitName } from "@/lib/helpers";
+import { createUserAsAdmin } from "@/lib/adminAuth";
 import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { toast } from "sonner";
 import { UserPlus, X } from "lucide-react";
@@ -40,22 +41,17 @@ export function CreatePatientDialog({ open, onOpenChange, onCreated }: CreatePat
     }
     setSubmitting(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { uid, error } = await createUserAsAdmin({
         email: form.email,
         password: form.password,
-        options: { data: { name: form.fullName, role: "patient" } },
+        name: form.fullName,
+        role: "patient",
       });
-      if (error) {
-        toast.error("فشل إنشاء الحساب", { description: error.message });
+      if (error || !uid) {
+        toast.error("فشل إنشاء الحساب", { description: error ?? undefined });
         setSubmitting(false);
         return;
       }
-      if (!data.user) {
-        toast.error("فشل إنشاء الحساب");
-        setSubmitting(false);
-        return;
-      }
-      const uid = data.user.id;
       const names = splitName(form.fullName);
 
       await supabase
