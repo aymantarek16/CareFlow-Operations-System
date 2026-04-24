@@ -9,6 +9,7 @@ import { usePatientOverview } from "@/hooks/useData";
 import { useDoctors } from "@/hooks/useData";
 import { useInsertMutation } from "@/hooks/useMutation";
 import { formatDate, formatTime } from "@/lib/helpers";
+import { formatSpecialtyBilingual } from "@/lib/specialties";
 import { CalendarPlus, Stethoscope, Calendar, Clock } from "lucide-react";
 
 export default function PatientBookAppointment() {
@@ -103,7 +104,7 @@ export default function PatientBookAppointment() {
                   <option value="">اختر الطبيب</option>
                   {doctors.map((d) => (
                     <option key={d.id} value={d.id}>
-                      {`${d.first_name ?? ""} ${d.last_name ?? ""} — ${d.specialty ?? "عام"}`}
+                      {`${d.first_name ?? ""} ${d.last_name ?? ""} — ${formatSpecialtyBilingual(d.specialty ?? "عام")}`}
                     </option>
                   ))}
                 </select>

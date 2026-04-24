@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useDoctors, useDepartments } from "@/hooks/useData";
 import { useDeleteMutation, useUpdateMutation } from "@/hooks/useMutation";
 import { formatDateTime, splitName } from "@/lib/helpers";
+import { formatSpecialtyBilingual } from "@/lib/specialties";
 import { supabase } from "@/lib/supabase";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -161,7 +162,7 @@ export default function AdminDoctors() {
               columns={["الاسم", "التخصص", "الهاتف", "تاريخ الإضافة", "الإجراءات"]}
               rows={filtered.map((d) => [
                 `${d.first_name ?? ""} ${d.last_name ?? ""}`.trim() || "-",
-                d.specialty ?? "-", 
+                d.specialty ? formatSpecialtyBilingual(d.specialty) : "-", 
                 d.phone ?? "-", 
                 formatDateTime(d.created_at),
                 <div key={d.id} className="flex items-center gap-2">
@@ -203,9 +204,9 @@ export default function AdminDoctors() {
                 >
                   <option value="">اختر التخصص / القسم</option>
                   {departments.map((dept) => (
-                    <option key={dept.id} value={dept.name}>{dept.name}</option>
+                    <option key={dept.id} value={dept.name}>{formatSpecialtyBilingual(dept.name)}</option>
                   ))}
-                  <option value="عام">عام</option>
+                  <option value="عام">{formatSpecialtyBilingual("عام")}</option>
                 </select>
               ) : (
                 <input placeholder="التخصص" value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })} required className={inputClass} />
@@ -255,9 +256,9 @@ export default function AdminDoctors() {
                 >
                   <option value="">اختر التخصص / القسم</option>
                   {departments.map((dept) => (
-                    <option key={dept.id} value={dept.name}>{dept.name}</option>
+                    <option key={dept.id} value={dept.name}>{formatSpecialtyBilingual(dept.name)}</option>
                   ))}
-                  <option value="عام">عام</option>
+                  <option value="عام">{formatSpecialtyBilingual("عام")}</option>
                 </select>
               ) : (
                 <input 

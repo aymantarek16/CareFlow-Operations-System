@@ -4,6 +4,7 @@ import { usePatients, useDoctors } from "@/hooks/useData";
 import { useEscapeClose } from "@/hooks/useEscapeClose";
 import { toast } from "sonner";
 import { CalendarPlus, X } from "lucide-react";
+import { formatSpecialtyBilingual } from "@/lib/specialties";
 
 type AppointmentStatus =
   | "scheduled"
@@ -174,7 +175,7 @@ export function CreateAppointmentDialog({
               {doctors.map((d) => (
                 <option key={d.id} value={d.id}>
                   {`${d.first_name ?? ""} ${d.last_name ?? ""}`.trim() || "(بدون اسم)"}
-                  {d.specialty ? ` — ${d.specialty}` : ""}
+                  {d.specialty ? ` — ${formatSpecialtyBilingual(d.specialty)}` : ""}
                 </option>
               ))}
             </select>

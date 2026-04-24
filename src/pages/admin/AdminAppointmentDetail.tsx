@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatDate, formatTime } from "@/lib/helpers";
+import { formatSpecialtyBilingual } from "@/lib/specialties";
 import type { AppointmentRecord, PatientProfile, DoctorProfile } from "@/lib/types";
 
 export default function AdminAppointmentDetail() {
@@ -67,7 +68,7 @@ export default function AdminAppointmentDetail() {
           {doctor ? (
             <div className="space-y-2 text-sm">
               <p className="text-foreground"><strong>الاسم:</strong> {doctor.first_name} {doctor.last_name}</p>
-              <p className="text-foreground/70"><strong>التخصص:</strong> {doctor.specialty ?? "-"}</p>
+              <p className="text-foreground/70"><strong>التخصص:</strong> {doctor.specialty ? formatSpecialtyBilingual(doctor.specialty) : "-"}</p>
               <p className="text-foreground/70"><strong>الهاتف:</strong> {doctor.phone ?? "-"}</p>
             </div>
           ) : <p className="text-foreground/50">جاري التحميل...</p>}

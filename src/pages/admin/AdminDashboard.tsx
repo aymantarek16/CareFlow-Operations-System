@@ -22,6 +22,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useAdminOverview } from "@/hooks/useData";
 import { formatDate, formatTime } from "@/lib/helpers";
 import { cn } from "@/lib/helpers";
+import { formatSpecialtyBilingual } from "@/lib/specialties";
 
 type HealthTone = "emerald" | "cyan" | "violet" | "amber" | "rose" | "indigo";
 
@@ -236,7 +237,7 @@ export default function AdminDashboard() {
                       </p>
                     </div>
                     <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary ring-1 ring-primary/25">
-                      {doc.specialty ?? "عام"}
+                      {formatSpecialtyBilingual(doc.specialty ?? "عام")}
                     </span>
                   </div>
                 );
