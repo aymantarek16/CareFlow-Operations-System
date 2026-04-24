@@ -1,4 +1,5 @@
 import { Activity, CalendarDays, Stethoscope, Users } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { StatCard } from "@/components/ui/StatCard";
 import { DataTable } from "@/components/ui/DataTable";
@@ -13,23 +14,11 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <section className="mb-6 rounded-[32px] border border-foreground/10 bg-gradient-to-br from-foreground/[0.055] to-foreground/[0.025] p-6 shadow-2xl shadow-black/20 backdrop-blur-xl lg:p-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="text-right">
-            <p className="mb-3 text-xs font-black uppercase tracking-[0.55em] text-primary">
-              Admin Control Center
-            </p>
-
-            <h1 className="text-4xl font-black leading-tight text-foreground md:text-5xl">
-              مركز قيادة العمليات الطبية
-            </h1>
-
-            <p className="mt-4 max-w-3xl text-base leading-8 text-foreground/60">
-              أرقام تشغيلية مباشرة، مؤشرات يومية، ورؤية سريعة على المواعيد وحالة المنصة.
-            </p>
-          </div>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Admin Control Center"
+        title="مركز قيادة العمليات الطبية"
+        description="أرقام تشغيلية مباشرة، مؤشرات يومية، ورؤية سريعة على المواعيد وحالة المنصة."
+      />
 
       <div className="metric-grid">
         {loading ? (
