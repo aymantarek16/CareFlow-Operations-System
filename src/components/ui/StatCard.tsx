@@ -141,7 +141,7 @@ export function StatCard({
           {/* Value */}
           <p
             className={cn(
-              "mt-3 text-4xl font-black leading-none tracking-tight text-white lg:text-[42px]",
+              "mt-3 text-4xl font-black leading-none tracking-tight text-white lg:text-[28px]",
             )}
           >
             {value}
