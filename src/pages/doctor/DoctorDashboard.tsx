@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useDoctorOverview } from "@/hooks/useData";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDate, formatTime } from "@/lib/helpers";
+import { formatSpecialtyBilingual } from "@/lib/specialties";
 import { Activity, Users, FileText, Phone } from "lucide-react";
 
 export default function DoctorDashboard() {
@@ -28,7 +29,7 @@ export default function DoctorDashboard() {
             <StatCard title="إجمالي المواعيد" value={metrics.appointmentsCount} hint="كل المواعيد" tone="emerald" icon={Activity} />
             <StatCard title="عدد المرضى" value={metrics.patientsCount} hint="مرضى مرتبطون" tone="cyan" icon={Users} />
             <StatCard title="سجلات طبية" value={metrics.recordsCount} hint="ملاحظات وتشخيصات" tone="violet" icon={FileText} />
-            <StatCard title="رقم التواصل" value={doctor?.phone ?? "-"} hint={doctor?.specialty ?? "تخصص غير محدد"} tone="amber" icon={Phone} />
+            <StatCard title="رقم التواصل" value={doctor?.phone ?? "-"} hint={doctor?.specialty ? formatSpecialtyBilingual(doctor.specialty) : "تخصص غير محدد"} tone="amber" icon={Phone} />
           </>
         )}
       </div>

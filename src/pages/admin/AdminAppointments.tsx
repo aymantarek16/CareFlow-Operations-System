@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useAppointments, useDoctors, usePatients } from "@/hooks/useData";
 import { useDeleteMutation, useUpdateMutation, useInsertMutation } from "@/hooks/useMutation";
 import { formatDate, formatTime } from "@/lib/helpers";
+import { formatSpecialtyBilingual } from "@/lib/specialties";
 import type { AppointmentRecord } from "@/lib/types";
 import { Link } from "react-router-dom";
 import { Pencil, Trash2, Plus, Search, CalendarPlus, Download } from "lucide-react";
@@ -246,7 +247,7 @@ export default function AdminAppointments() {
               </select>
               <select value={form.doctor_id} onChange={(e) => setForm({ ...form, doctor_id: e.target.value })} className={selectClass} required>
                 <option value="">اختر الطبيب</option>
-                {doctors.map((d) => <option key={d.id} value={d.id}>{`${d.first_name ?? ""} ${d.last_name ?? ""} — ${d.specialty ?? "عام"}`}</option>)}
+                {doctors.map((d) => <option key={d.id} value={d.id}>{`${d.first_name ?? ""} ${d.last_name ?? ""} — ${formatSpecialtyBilingual(d.specialty ?? "عام")}`}</option>)}
               </select>
               <div className="grid grid-cols-2 gap-3">
                 <input type="date" value={form.appointment_date} onChange={(e) => setForm({ ...form, appointment_date: e.target.value })} className={inputClass} required />
