@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { usePatients } from "@/hooks/useData";
 import { useDeleteMutation, useUpdateMutation } from "@/hooks/useMutation";
 import { formatDateTime, splitName } from "@/lib/helpers";
+import { createUserAsAdmin } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -57,28 +58,46 @@ export default function AdminPatients() {
     e.preventDefault();
     setCreating(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: form.email, password: form.password,
-        options: { data: { name: form.fullName, role: "patient" } },
+      const { uid, error } = await createUserAsAdmin({
+        email: form.email,
+        password: form.password,
+        name: form.fullName,
+        role: "patient",
       });
-      if (error) { 
-        toast.error("فشل إنشاء الحساب", { description: error.message });
-        setCreating(false); 
-        return; 
+      if (error || !uid) {
+        toast.error("فشل إنشاء الحساب", { description: error ?? undefined });
+        setCreating(false);
+        return;
       }
-      if (!data.user) { 
-        toast.error("فشل إنشاء الحساب");
-        setCreating(false); 
-        return; 
-      }
-      const uid = data.user.id;
       const names = splitName(form.fullName);
-      await supabase.from("users").insert({ id: uid, name: form.fullName, email: form.email, role: "patient" });
-      await supabase.from("patients").insert({ user_id: uid, first_name: names.firstName, last_name: names.lastName, phone: form.phone, gender: form.gender, date_of_birth: form.dateOfBirth });
+      const { error: uErr } = await supabase
+        .from("users")
+        .upsert(
+          { id: uid, name: form.fullName, email: form.email, role: "patient" },
+          { onConflict: "id" },
+        );
+      if (uErr) {
+        toast.error("فشل حفظ بيانات المستخدم", { description: uErr.message });
+        setCreating(false);
+        return;
+      }
+      const { error: pErr } = await supabase.from("patients").insert({
+        user_id: uid,
+        first_name: names.firstName,
+        last_name: names.lastName,
+        phone: form.phone,
+        gender: form.gender,
+        date_of_birth: form.dateOfBirth,
+      });
+      if (pErr) {
+        toast.error("فشل حفظ ملف المريض", { description: pErr.message });
+        setCreating(false);
+        return;
+      }
       toast.success("تم إنشاء حساب المريض بنجاح");
       setForm({ fullName: "", email: "", password: "", phone: "", gender: "male", dateOfBirth: "" });
       refetch();
-    } catch (err) { 
+    } catch (err) {
       toast.error("حدث خطأ", { description: err instanceof Error ? err.message : "خطأ غير معروف" });
     }
     setCreating(false);

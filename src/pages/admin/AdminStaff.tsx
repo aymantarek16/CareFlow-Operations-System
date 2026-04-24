@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useSupabaseQuery } from "@/hooks/useData";
 import { useDeleteMutation, useUpdateMutation } from "@/hooks/useMutation";
 import { formatDateTime } from "@/lib/helpers";
+import { createUserAsAdmin } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import type { AppUser, AppRole } from "@/lib/types";
@@ -104,30 +105,18 @@ export default function AdminStaff() {
     setCreating(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { uid, error } = await createUserAsAdmin({
         email: form.email,
         password: form.password,
-        options: {
-          data: {
-            name: form.fullName,
-            role: form.role,
-          },
-        },
+        name: form.fullName,
+        role: form.role,
       });
 
-      if (error) {
-        toast.error("فشل إنشاء الحساب", { description: error.message });
+      if (error || !uid) {
+        toast.error("فشل إنشاء الحساب", { description: error ?? undefined });
         setCreating(false);
         return;
       }
-
-      if (!data.user) {
-        toast.error("فشل إنشاء الحساب");
-        setCreating(false);
-        return;
-      }
-
-      const uid = data.user.id;
 
       const { error: upsertErr } = await supabase.from("users").upsert(
         {

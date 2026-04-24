@@ -9,14 +9,34 @@ import { useDoctorOverview } from "@/hooks/useData";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDate, formatTime } from "@/lib/helpers";
 import { formatSpecialtyBilingual } from "@/lib/specialties";
-import { Activity, Users, FileText, Phone } from "lucide-react";
+import { Activity, Users, FileText, Phone, AlertTriangle } from "lucide-react";
 
 export default function DoctorDashboard() {
   const { appUser } = useAuth();
-  const { doctor, myAppointments, myPatients, metrics } = useDoctorOverview();
+  const { loading, profileMissing, doctor, myAppointments, myPatients, metrics } = useDoctorOverview();
   const patientMap = new Map(myPatients.map((p) => [p.id, `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || p.id]));
 
-  const isLoading = !doctor && !myAppointments.length && !myPatients.length;
+  const isLoading = loading;
+
+  if (profileMissing) {
+    return (
+      <div>
+        <PageHeader
+          eyebrow="Doctor Workspace"
+          title={`أهلاً د. ${appUser?.name ?? ""}`}
+          description="لوحة الطبيب."
+        />
+        <div className="mt-6 flex flex-col items-center gap-3 rounded-[24px] border border-amber-400/30 bg-amber-400/5 p-8 text-center">
+          <AlertTriangle className="h-8 w-8 text-amber-300" />
+          <p className="text-lg font-semibold text-foreground">ملف الطبيب غير مكتمل</p>
+          <p className="max-w-xl text-sm leading-7 text-foreground/60">
+            تم إنشاء حسابك على النظام ولكن لم يتم ربطه ببروفايل طبيب بعد.
+            تواصل مع المسؤول ليتم استكمال بياناتك من شاشة إدارة الأطباء.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

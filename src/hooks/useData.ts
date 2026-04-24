@@ -90,18 +90,24 @@ export function useAdminOverview() {
 
 export function useDoctorOverview() {
   const { appUser } = useAuth();
-  const { data: doctors } = useDoctors();
-  const { data: patients } = usePatients();
-  const { data: appointments } = useAppointments();
-  const { data: medicalRecords } = useMedicalRecords();
+  const { data: doctors, loading: ld } = useDoctors();
+  const { data: patients, loading: lp } = usePatients();
+  const { data: appointments, loading: la } = useAppointments();
+  const { data: medicalRecords, loading: lm } = useMedicalRecords();
 
+  const loading = ld || lp || la || lm;
   const doctor = doctors.find((d) => d.user_id === appUser?.id) ?? null;
+  // Once the doctors query has finished loading, a null `doctor` means the
+  // profile row is missing — we surface that explicitly so the dashboard
+  // can render a helpful message instead of spinning forever.
+  const profileMissing = !loading && !doctor;
   const myAppointments = doctor ? appointments.filter((a) => a.doctor_id === doctor.id) : [];
   const myPatients = doctor ? patients.filter((p) => myAppointments.some((a) => a.patient_id === p.id)) : [];
   const myRecords = doctor ? medicalRecords.filter((r) => r.doctor_id === doctor.id) : [];
   const completed = myAppointments.filter((a) => a.status === "completed").length;
 
   return {
+    loading, profileMissing,
     doctor, myAppointments, myPatients, myRecords,
     metrics: {
       appointmentsCount: myAppointments.length, patientsCount: myPatients.length, recordsCount: myRecords.length,
@@ -112,19 +118,22 @@ export function useDoctorOverview() {
 
 export function usePatientOverview() {
   const { appUser } = useAuth();
-  const { data: patients } = usePatients();
-  const { data: doctors } = useDoctors();
-  const { data: appointments } = useAppointments();
-  const { data: medicalRecords } = useMedicalRecords();
-  const { data: invoices } = useInvoices();
+  const { data: patients, loading: lp } = usePatients();
+  const { data: doctors, loading: ld } = useDoctors();
+  const { data: appointments, loading: la } = useAppointments();
+  const { data: medicalRecords, loading: lm } = useMedicalRecords();
+  const { data: invoices, loading: li } = useInvoices();
 
+  const loading = lp || ld || la || lm || li;
   const patient = patients.find((p) => p.user_id === appUser?.id) ?? null;
+  const profileMissing = !loading && !patient;
   const myAppointments = patient ? appointments.filter((a) => a.patient_id === patient.id) : [];
   const myRecords = patient ? medicalRecords.filter((r) => r.patient_id === patient.id) : [];
   const myInvoices = patient ? invoices.filter((i) => i.patient_id === patient.id) : [];
   const myDoctors = doctors.filter((d) => myAppointments.some((a) => a.doctor_id === d.id));
 
   return {
+    loading, profileMissing,
     patient, myAppointments, myRecords, myInvoices, myDoctors,
     metrics: {
       appointmentsCount: myAppointments.length, doctorsCount: myDoctors.length,
