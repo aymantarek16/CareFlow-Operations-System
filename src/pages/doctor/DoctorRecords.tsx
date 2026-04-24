@@ -12,7 +12,9 @@ import { useDeleteMutation, useUpdateMutation, useInsertMutation } from "@/hooks
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDateTime } from "@/lib/helpers";
 import type { MedicalRecord } from "@/lib/types";
-import { Pencil, Trash2, Plus, Search, FileText, Stethoscope } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, FileText, Stethoscope, Printer, Download } from "lucide-react";
+import { toast } from "sonner";
+import { generatePdfReport } from "@/lib/pdf";
 
 export default function DoctorRecords() {
   const { appUser } = useAuth();
@@ -125,6 +127,62 @@ export default function DoctorRecords() {
     return patient ? `${patient.first_name} ${patient.last_name}` : patientId;
   };
 
+  const doctorName = doctor
+    ? `${doctor.first_name ?? ""} ${doctor.last_name ?? ""}`.trim() || "—"
+    : "—";
+
+  const [exporting, setExporting] = useState(false);
+
+  const printRecord = async (record: MedicalRecord) => {
+    try {
+      await generatePdfReport({
+        title: "سجل طبي",
+        subtitle: `رقم السجل: ${record.id.slice(0, 8)}`,
+        filename: `medical-record-${record.id.slice(0, 8)}`,
+        meta: [
+          { label: "المريض", value: getPatientName(record.patient_id) },
+          { label: "الطبيب المعالج", value: doctorName },
+          { label: "تاريخ الإضافة", value: formatDateTime(record.created_at) },
+        ],
+        sections: [
+          { heading: "التشخيص", body: record.diagnosis ?? "—" },
+          { heading: "الوصفة / العلاج", body: record.prescription ?? "—" },
+          { heading: "الملاحظات", body: record.notes ?? "—" },
+        ],
+        footer: "ملف طبي — للاستخدام الخاص بالمريض",
+      });
+      toast.success("تم تحميل السجل");
+    } catch {
+      toast.error("تعذّر إنشاء السجل");
+    }
+  };
+
+  const exportAll = async () => {
+    setExporting(true);
+    try {
+      await generatePdfReport({
+        title: "تقرير السجلات الطبية",
+        subtitle: `الطبيب: ${doctorName}`,
+        filename: `medical-records-${new Date().toISOString().slice(0, 10)}`,
+        meta: [{ label: "عدد السجلات", value: filtered.length }],
+        table: {
+          columns: ["المريض", "التشخيص", "الملاحظات", "تاريخ الإضافة"],
+          rows: filtered.map((r) => [
+            getPatientName(r.patient_id),
+            r.diagnosis ?? "-",
+            r.notes ?? "-",
+            formatDateTime(r.created_at),
+          ]),
+        },
+      });
+      toast.success("تم تحميل التقرير");
+    } catch {
+      toast.error("تعذّر إنشاء ملف PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const inputClass = "h-12 w-full rounded-2xl border border-foreground/10 bg-foreground/5 px-4 text-sm text-foreground outline-none transition focus:border-primary/50";
   const selectClass = inputClass + " bg-[#0b1f19]";
   const loading = doctorsLoading || patientsLoading || recordsLoading;
@@ -164,10 +222,21 @@ export default function DoctorRecords() {
           title={`سجلاتي الطبية (${filtered.length})`} 
           subtitle="السجلات الطبية المرتبطة بك"
           action={
-            <button className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20">
-              <FileText className="h-3.5 w-3.5" />
-              سجل جديد
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={exportAll}
+                disabled={exporting || filtered.length === 0}
+                className="flex items-center gap-2 rounded-xl bg-foreground/5 px-3 py-2 text-xs font-semibold text-foreground/80 hover:bg-foreground/10 disabled:opacity-50"
+              >
+                <Download className="h-3.5 w-3.5" />
+                {exporting ? "جاري التصدير..." : "تصدير PDF"}
+              </button>
+              <button className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20">
+                <FileText className="h-3.5 w-3.5" />
+                سجل جديد
+              </button>
+            </div>
           }
         >
           {loading ? (
@@ -191,6 +260,13 @@ export default function DoctorRecords() {
                 </span>,
                 formatDateTime(r.created_at),
                 <div key={r.id} className="flex items-center gap-2">
+                  <button 
+                    onClick={() => printRecord(r)}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-400 hover:bg-emerald-400/20"
+                    title="طباعة PDF"
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                  </button>
                   <button 
                     onClick={() => handleEditClick(r)}
                     className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-400/10 text-amber-400 hover:bg-amber-400/20"
