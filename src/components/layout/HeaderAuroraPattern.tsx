@@ -1,36 +1,26 @@
-import { motion, type Variants } from "framer-motion";
-import { useMemo } from "react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/helpers";
 
 /**
  * HeaderAuroraPattern
  * -------------------
- * A reusable decorative background layer for page headers.
+ * A minimal, elegant decorative background for page headers. Designed to
+ * suggest "modern medical tech" without competing with the content.
  *
- * Renders soft aurora-like light waves, a handful of twinkling particles,
- * and a subtle perspective grid on the **left-most ~40%** of the header.
- * The layer fades gracefully to transparent by the middle so it never
- * competes with the header text.
+ * Layers (from back to front):
+ *   1. A single soft corner glow that slowly breathes.
+ *   2. Two thin flowing light waves (smooth sine curves) that drift.
+ *   3. A few tiny twinkling specks — optional, only on ≥ md screens.
  *
- * Usage
- * -----
- * <header className="relative overflow-hidden">
- *   <HeaderAuroraPattern />
- *   <div className="relative z-10">...</div>
- * </header>
+ * Everything is confined to the start-edge of the container (left in LTR,
+ * right in RTL) via a horizontal mask that fades to transparent by the
+ * middle, so the heading text on the opposite side always stays crisp.
  *
- * Props
- * -----
- * - className  additional classes for the wrapper
- * - intensity  "soft" (default) | "medium" — global opacity scaling
- * - color      "emerald" | "cyan" | "mixed" (default)
- *
- * Notes
- * -----
- * - Pointer-events are disabled; the pattern never intercepts clicks.
- * - Fine details (particles, grid) are hidden on small screens for perf.
- * - All animations are infinite, slow, and easing-driven. `prefers-reduced-motion`
- *   is respected by framer-motion automatically when the user enables it.
+ * Usage:
+ *   <header className="relative overflow-hidden">
+ *     <HeaderAuroraPattern />
+ *     <div className="relative z-10">…header content…</div>
+ *   </header>
  */
 type Intensity = "soft" | "medium";
 type ColorScheme = "emerald" | "cyan" | "mixed";
@@ -41,197 +31,169 @@ export interface HeaderAuroraPatternProps {
   color?: ColorScheme;
 }
 
-const PALETTES: Record<ColorScheme, { a: string; b: string; c: string }> = {
-  emerald: { a: "#34d399", b: "#10b981", c: "#6ee7b7" },
-  cyan:    { a: "#22d3ee", b: "#0891b2", c: "#67e8f9" },
-  mixed:   { a: "#34d399", b: "#22d3ee", c: "#6ee7b7" },
-};
-
-const INTENSITY_MULT: Record<Intensity, number> = {
-  soft: 0.7,
-  medium: 1,
-};
-
-// Stable particle layout (computed once per color/intensity) ------------------
-function useParticles(seed: number, count: number) {
-  return useMemo(() => {
-    // Simple deterministic pseudo-random so SSR & client match.
-    let s = seed;
-    const rnd = () => {
-      s = (s * 9301 + 49297) % 233280;
-      return s / 233280;
-    };
-    return Array.from({ length: count }).map((_, i) => ({
-      id: i,
-      // confine horizontally to the left 40% of the header
-      x: rnd() * 40,
-      y: rnd() * 100,
-      size: 1 + rnd() * 1.8,
-      delay: rnd() * 4,
-      duration: 2.6 + rnd() * 2.8,
-    }));
-  }, [seed, count]);
-}
-
-const waveVariants: Variants = {
-  animate: {
-    // slow, gentle floating loop
-    transform: [
-      "translate3d(0px, 0px, 0)",
-      "translate3d(8px, -6px, 0)",
-      "translate3d(-4px, 4px, 0)",
-      "translate3d(0px, 0px, 0)",
-    ],
-    transition: {
-      duration: 14,
-      ease: "easeInOut",
-      repeat: Infinity,
-    },
+const PALETTE: Record<ColorScheme, { glow: string; line1: string; line2: string; spark: string }> = {
+  emerald: {
+    glow:  "rgba(52,211,153,0.35)",
+    line1: "#34d399",
+    line2: "#6ee7b7",
+    spark: "#6ee7b7",
+  },
+  cyan: {
+    glow:  "rgba(34,211,238,0.32)",
+    line1: "#22d3ee",
+    line2: "#67e8f9",
+    spark: "#67e8f9",
+  },
+  mixed: {
+    glow:  "rgba(52,211,153,0.32)",
+    line1: "#34d399",
+    line2: "#22d3ee",
+    spark: "#6ee7b7",
   },
 };
 
-const glowVariants: Variants = {
-  animate: {
-    opacity: [0.32, 0.46, 0.32],
-    scale: [1, 1.04, 1],
-    transition: {
-      duration: 8,
-      ease: "easeInOut",
-      repeat: Infinity,
-    },
-  },
-};
+const MULT: Record<Intensity, number> = { soft: 0.75, medium: 1 };
+
+// Deterministic tiny specks — stable between renders, no layout jitter.
+const SPARKS = [
+  { x: 8,  y: 28, delay: 0.0, duration: 4.5 },
+  { x: 16, y: 68, delay: 1.2, duration: 5.2 },
+  { x: 24, y: 20, delay: 2.0, duration: 4.0 },
+  { x: 32, y: 58, delay: 0.6, duration: 5.8 },
+  { x: 13, y: 85, delay: 2.8, duration: 4.8 },
+];
 
 export function HeaderAuroraPattern({
   className,
   intensity = "soft",
   color = "mixed",
 }: HeaderAuroraPatternProps) {
-  const palette = PALETTES[color];
-  const mult = INTENSITY_MULT[intensity];
-  const particles = useParticles(42, 14);
-
-  // Scaled opacity constants — keep every layer subtle.
-  const op = {
-    glow: 0.32 * mult,
-    wave1: 0.28 * mult,
-    wave2: 0.22 * mult,
-    wave3: 0.18 * mult,
-    grid: 0.14 * mult,
-    particle: 0.55 * mult,
-  };
+  const p = PALETTE[color];
+  const k = MULT[intensity];
 
   return (
     <div
       aria-hidden
       className={cn(
-        "pointer-events-none absolute inset-0 select-none",
+        "pointer-events-none absolute inset-0 select-none overflow-hidden",
         className,
       )}
       style={{
-        // Limit the pattern to the left ~42% of the header and fade it out
-        // toward the middle so text/content on the right stays readable.
+        // Confine the whole pattern to the start-edge ~42% and fade it out.
+        // `mask-image` is inherited by every child, so each layer below
+        // respects the fade without having to redeclare it.
         WebkitMaskImage:
-          "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 30%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0) 100%)",
+          "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.95) 28%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0) 100%)",
         maskImage:
-          "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 30%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0) 100%)",
+          "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.95) 28%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0) 100%)",
       }}
     >
-      {/* Ambient corner glow -------------------------------------------- */}
+      {/* 1 — breathing corner glow -------------------------------------- */}
       <motion.div
-        className="absolute -top-16 -left-16 h-[360px] w-[360px] rounded-full blur-3xl"
+        className="absolute -top-20 -left-24 h-[420px] w-[420px] rounded-full blur-[80px]"
         style={{
-          background: `radial-gradient(circle at 30% 30%, ${palette.a}55, ${palette.b}22 45%, transparent 70%)`,
-          opacity: op.glow,
+          background: `radial-gradient(circle at 35% 35%, ${p.glow}, transparent 65%)`,
+          opacity: 0.5 * k,
+          willChange: "opacity, transform",
         }}
-        variants={glowVariants}
-        animate="animate"
+        animate={{
+          opacity: [0.35 * k, 0.55 * k, 0.35 * k],
+          scale: [1, 1.05, 1],
+        }}
+        transition={{
+          duration: 9,
+          ease: "easeInOut",
+          repeat: Infinity,
+        }}
       />
 
-      {/* Aurora waves (SVG) --------------------------------------------- */}
-      <motion.svg
+      {/* 2 — flowing light waves (two thin smooth lines) ---------------- */}
+      <svg
         className="absolute inset-0 h-full w-full"
         viewBox="0 0 800 240"
         preserveAspectRatio="none"
-        variants={waveVariants}
-        animate="animate"
       >
         <defs>
-          <linearGradient id="auroraGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stopColor={palette.a} stopOpacity="0.85" />
-            <stop offset="55%"  stopColor={palette.b} stopOpacity="0.55" />
-            <stop offset="100%" stopColor={palette.c} stopOpacity="0" />
+          <linearGradient id="auroraLine1" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stopColor={p.line1} stopOpacity="0" />
+            <stop offset="30%"  stopColor={p.line1} stopOpacity={0.9 * k} />
+            <stop offset="70%"  stopColor={p.line2} stopOpacity={0.4 * k} />
+            <stop offset="100%" stopColor={p.line2} stopOpacity="0" />
           </linearGradient>
-          <linearGradient id="auroraGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stopColor={palette.c} stopOpacity="0.7" />
-            <stop offset="60%"  stopColor={palette.a} stopOpacity="0.35" />
-            <stop offset="100%" stopColor={palette.b} stopOpacity="0" />
+          <linearGradient id="auroraLine2" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stopColor={p.line2} stopOpacity="0" />
+            <stop offset="35%"  stopColor={p.line2} stopOpacity={0.7 * k} />
+            <stop offset="75%"  stopColor={p.line1} stopOpacity={0.28 * k} />
+            <stop offset="100%" stopColor={p.line1} stopOpacity="0" />
           </linearGradient>
-          <filter id="auroraBlur" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3" />
+          <filter id="auroraSoftBlur" x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur stdDeviation="2.2" />
           </filter>
         </defs>
 
-        <g filter="url(#auroraBlur)">
-          <path
-            d="M0,80 C90,40 180,110 270,70 C360,30 430,90 520,60 L520,100 C430,140 360,80 270,120 C180,160 90,100 0,140 Z"
-            fill="url(#auroraGrad1)"
-            opacity={op.wave1}
-          />
-          <path
-            d="M0,140 C70,100 160,170 240,130 C320,90 390,150 470,120 L470,160 C390,200 320,140 240,180 C160,220 70,160 0,200 Z"
-            fill="url(#auroraGrad2)"
-            opacity={op.wave2}
-          />
-          <path
-            d="M0,40 C80,10 160,70 240,30 L240,70 C160,110 80,50 0,80 Z"
-            fill="url(#auroraGrad1)"
-            opacity={op.wave3}
-          />
-        </g>
-      </motion.svg>
+        {/* Front line — travels top→bottom slowly */}
+        <motion.path
+          d="M0,110 C120,70 240,150 360,110 C480,70 580,130 700,100"
+          fill="none"
+          stroke="url(#auroraLine1)"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          filter="url(#auroraSoftBlur)"
+          animate={{
+            d: [
+              "M0,110 C120,70 240,150 360,110 C480,70 580,130 700,100",
+              "M0,120 C120,90 240,130 360,100 C480,80 580,145 700,110",
+              "M0,110 C120,70 240,150 360,110 C480,70 580,130 700,100",
+            ],
+          }}
+          transition={{
+            duration: 16,
+            ease: "easeInOut",
+            repeat: Infinity,
+          }}
+        />
 
-      {/* Grid perspective (bottom) -------------------------------------- */}
-      <div
-        className="absolute inset-x-0 bottom-0 hidden h-28 sm:block"
-        style={{
-          opacity: op.grid,
-          backgroundImage: `
-            linear-gradient(${palette.a}80 1px, transparent 1px),
-            linear-gradient(90deg, ${palette.a}80 1px, transparent 1px)
-          `,
-          backgroundSize: "40px 24px, 40px 24px",
-          transform: "perspective(360px) rotateX(58deg)",
-          transformOrigin: "bottom center",
-          WebkitMaskImage:
-            "radial-gradient(ellipse at 15% 100%, #000 0%, transparent 65%)",
-          maskImage:
-            "radial-gradient(ellipse at 15% 100%, #000 0%, transparent 65%)",
-        }}
-      />
+        {/* Back line — wider arc, slower */}
+        <motion.path
+          d="M0,160 C140,120 280,200 420,150 C540,110 620,170 760,140"
+          fill="none"
+          stroke="url(#auroraLine2)"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+          filter="url(#auroraSoftBlur)"
+          animate={{
+            d: [
+              "M0,160 C140,120 280,200 420,150 C540,110 620,170 760,140",
+              "M0,155 C140,135 280,180 420,160 C540,130 620,180 760,150",
+              "M0,160 C140,120 280,200 420,150 C540,110 620,170 760,140",
+            ],
+          }}
+          transition={{
+            duration: 20,
+            ease: "easeInOut",
+            repeat: Infinity,
+          }}
+        />
+      </svg>
 
-      {/* Particles ------------------------------------------------------ */}
-      <div className="absolute inset-0 hidden sm:block">
-        {particles.map((p) => (
+      {/* 3 — a handful of tiny specks ----------------------------------- */}
+      <div className="absolute inset-0 hidden md:block">
+        {SPARKS.map((s, i) => (
           <motion.span
-            key={p.id}
+            key={i}
             className="absolute rounded-full"
             style={{
-              left:  `${p.x}%`,
-              top:   `${p.y}%`,
-              width: `${p.size}px`,
-              height: `${p.size}px`,
-              backgroundColor: palette.c,
-              boxShadow: `0 0 ${p.size * 3}px ${palette.a}`,
+              left: `${s.x}%`,
+              top: `${s.y}%`,
+              width: 2,
+              height: 2,
+              backgroundColor: p.spark,
+              boxShadow: `0 0 6px ${p.spark}`,
             }}
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{
-              opacity: [0, op.particle, 0],
-              scale: [0.6, 1, 0.6],
-            }}
+            animate={{ opacity: [0, 0.6 * k, 0], scale: [0.7, 1.1, 0.7] }}
             transition={{
-              duration: p.duration,
-              delay: p.delay,
+              duration: s.duration,
+              delay: s.delay,
               ease: "easeInOut",
               repeat: Infinity,
             }}
