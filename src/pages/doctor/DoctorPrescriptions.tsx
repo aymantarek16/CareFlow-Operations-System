@@ -11,7 +11,7 @@ import { useDeleteMutation, useUpdateMutation, useInsertMutation } from "@/hooks
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDateTime } from "@/lib/helpers";
 import type { Prescription } from "@/lib/types";
-import { Pencil, Trash2, Plus, Search, Pill, Syringe } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, Pill, Syringe, X } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { optionalMultilineSchema, optionalShortTextSchema, safeValidate, shortTextSchema } from "@/lib/validation";
@@ -32,7 +32,6 @@ const editPrescriptionSchema = z.object({
   duration: optionalShortTextSchema(120),
   instructions: optionalMultilineSchema(2000),
 });
-import { Pencil, Trash2, Plus, Search, Pill, Syringe, X } from "lucide-react";
 
 type PrescriptionFormState = {
   patient_id: string;
@@ -179,32 +178,31 @@ export default function DoctorPrescriptions() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingPrescription) return;
+    if (!doctor || !canSubmit) return;
 
-    const validation = safeValidate(editPrescriptionSchema, editForm);
+    if (editingPrescription) {
+      const validation = safeValidate(editPrescriptionSchema, {
+        medication: form.medication,
+        dosage: form.dosage,
+        frequency: form.frequency,
+        duration: form.duration,
+        instructions: form.instructions,
+      });
+      if (!validation.data) {
+        toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
+        return;
+      }
+      await updatePrescription(editingPrescription.id, validation.data);
+      return;
+    }
+
+    const validation = safeValidate(prescriptionSchema, form);
     if (!validation.data) {
       toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
       return;
     }
-    await updatePrescription(editingPrescription.id, validation.data);
-    if (!doctor || !canSubmit) return;
-
-    const payload = {
-      patient_id: form.patient_id,
-      medication: form.medication.trim(),
-      dosage: form.dosage.trim(),
-      frequency: form.frequency.trim(),
-      duration: form.duration.trim(),
-      instructions: form.instructions.trim(),
-    };
-
-    if (editingPrescription) {
-      await updatePrescription(editingPrescription.id, payload);
-      return;
-    }
-
     await createPrescription({
-      ...payload,
+      ...validation.data,
       doctor_id: doctor.id,
     });
   };

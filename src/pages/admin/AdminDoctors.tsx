@@ -18,8 +18,6 @@ import { formatSpecialtyBilingual } from "@/lib/specialties";
 import { supabase } from "@/lib/supabase";
 import { adminCreateDoctorSchema, safeValidate } from "@/lib/validation";
 import { friendlyErrorMessage } from "@/lib/sanitize";
-import { Link } from "react-router-dom";
-import { toast } from "sonner";
 import type { DoctorProfile } from "@/lib/types";
 
 type CreateDoctorForm = {
@@ -140,16 +138,6 @@ export default function AdminDoctors() {
       return;
     }
     const clean = validation.data;
-    const fullName = form.fullName.trim();
-    const email = form.email.trim();
-    const password = form.password.trim();
-    const specialty = form.specialty.trim();
-    const phone = form.phone.trim();
-
-    if (!fullName || !email || !password || !specialty || !phone) {
-      toast.error("أكمل بيانات الطبيب المطلوبة");
-      return;
-    }
 
     setCreating(true);
 
@@ -158,39 +146,25 @@ export default function AdminDoctors() {
         email: clean.email,
         password: clean.password,
         name: clean.fullName,
-        email,
-        password,
-        name: fullName,
         role: "doctor",
       });
 
       if (error || !uid) {
         toast.error("فشل إنشاء الحساب", { description: friendlyErrorMessage(error) });
-        setCreating(false);
         return;
       }
+
       const names = splitName(clean.fullName);
-      const { error: uErr } = await supabase
+
+      const { error: userError } = await supabase
         .from("users")
         .upsert(
           { id: uid, name: clean.fullName, email: clean.email, role: "doctor" },
           { onConflict: "id" },
         );
-      if (uErr) {
-        toast.error("فشل حفظ بيانات المستخدم", { description: friendlyErrorMessage(uErr.message) });
-        setCreating(false);
-        toast.error("فشل إنشاء الحساب", { description: error ?? undefined });
-        return;
-      }
-
-      const names = splitName(fullName);
-
-      const { error: userError } = await supabase
-        .from("users")
-        .upsert({ id: uid, name: fullName, email, role: "doctor" }, { onConflict: "id" });
 
       if (userError) {
-        toast.error("فشل حفظ بيانات المستخدم", { description: userError.message });
+        toast.error("فشل حفظ بيانات المستخدم", { description: friendlyErrorMessage(userError.message) });
         return;
       }
 
@@ -201,15 +175,9 @@ export default function AdminDoctors() {
         specialty: clean.specialty,
         phone: clean.phone,
       });
-      if (dErr) {
-        toast.error("فشل حفظ ملف الطبيب", { description: friendlyErrorMessage(dErr.message) });
-        setCreating(false);
-        specialty,
-        phone,
-      });
 
       if (doctorError) {
-        toast.error("فشل حفظ ملف الطبيب", { description: doctorError.message });
+        toast.error("فشل حفظ ملف الطبيب", { description: friendlyErrorMessage(doctorError.message) });
         return;
       }
 
@@ -219,7 +187,6 @@ export default function AdminDoctors() {
       refetch();
     } catch (err) {
       toast.error("حدث خطأ", { description: friendlyErrorMessage(err) });
-      toast.error("حدث خطأ", { description: err instanceof Error ? err.message : "خطأ غير معروف" });
     } finally {
       setCreating(false);
     }

@@ -37,7 +37,7 @@ export function tryAction(
   max: number,
   windowMs: number,
   cooldownMs: number,
-): { allowed: true } | { allowed: false; retryAfterMs: number } {
+): { allowed: boolean; retryAfterMs: number } {
   const now = Date.now();
   let bucket = buckets.get(key);
   if (!bucket) {
@@ -60,7 +60,7 @@ export function tryAction(
     return { allowed: false, retryAfterMs: cooldownMs };
   }
 
-  return { allowed: true };
+  return { allowed: true, retryAfterMs: 0 };
 }
 
 /** Manually clear a bucket (e.g. after a successful login). */
