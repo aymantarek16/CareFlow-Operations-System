@@ -42,6 +42,7 @@ export type AppointmentRecord = {
 };
 
 export type MedicalRecord = {
+  attachments: string;
   id: string;
   patient_id: string;
   doctor_id: string;

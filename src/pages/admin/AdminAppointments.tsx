@@ -33,6 +33,10 @@ export default function AdminAppointments() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [form, setForm] = useState({ patient_id: "", doctor_id: "", appointment_date: "", appointment_time: "", status: "scheduled", reason: "", notes: "" });
+
+  // Create state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  useEscapeClose(createModalOpen, () => setCreateModalOpen(false));
   
   // Edit state
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -57,6 +61,7 @@ export default function AdminAppointments() {
     onSuccess: () => {
       refetch();
       setForm({ patient_id: "", doctor_id: "", appointment_date: "", appointment_time: "", status: "scheduled", reason: "", notes: "" });
+      setCreateModalOpen(false);
     },
     successMessage: "تم إنشاء الموعد بنجاح",
   });
@@ -169,7 +174,7 @@ export default function AdminAppointments() {
         </select>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.35fr,0.65fr]">
+      <div className="grid gap-6">
         <GlassCard 
           title={`المواعيد (${filtered.length})`} 
           subtitle="جدول تشغيلي مباشر"
@@ -184,7 +189,7 @@ export default function AdminAppointments() {
                 <Download className="h-3.5 w-3.5" />
                 {exporting ? "جاري التصدير..." : "تصدير PDF"}
               </button>
-              <button className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20">
+              <button type="button" onClick={() => setCreateModalOpen(true)} className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20">
                 <CalendarPlus className="h-3.5 w-3.5" />
                 حجز موعد
               </button>
@@ -198,7 +203,7 @@ export default function AdminAppointments() {
               variant={search || statusFilter ? "search" : "data"}
               action={
                 (search || statusFilter) ? undefined : (
-                  <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-white">
+                  <button type="button" onClick={() => setCreateModalOpen(true)} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-white">
                     <Plus className="h-4 w-4" />
                     حجز أول موعد
                   </button>
@@ -235,50 +240,77 @@ export default function AdminAppointments() {
             />
           )}
         </GlassCard>
-
-        <GlassCard title="إضافة موعد جديد" subtitle="حجز سريع">
-          {loading ? (
-            <SkeletonForm fields={7} />
-          ) : (
-            <form onSubmit={handleCreate} className="grid gap-3">
-              <select value={form.patient_id} onChange={(e) => setForm({ ...form, patient_id: e.target.value })} className={selectClass} required>
-                <option value="">اختر المريض</option>
-                {patients.map((p) => <option key={p.id} value={p.id}>{`${p.first_name ?? ""} ${p.last_name ?? ""}`}</option>)}
-              </select>
-              <select value={form.doctor_id} onChange={(e) => setForm({ ...form, doctor_id: e.target.value })} className={selectClass} required>
-                <option value="">اختر الطبيب</option>
-                {doctors.map((d) => <option key={d.id} value={d.id}>{`${d.first_name ?? ""} ${d.last_name ?? ""} — ${formatSpecialtyBilingual(d.specialty ?? "عام")}`}</option>)}
-              </select>
-              <div className="grid grid-cols-2 gap-3">
-                <input type="date" value={form.appointment_date} onChange={(e) => setForm({ ...form, appointment_date: e.target.value })} className={inputClass} required />
-                <input type="time" value={form.appointment_time} onChange={(e) => setForm({ ...form, appointment_time: e.target.value })} className={inputClass} required />
-              </div>
-              <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className={selectClass}>
-                <option value="scheduled">مجدول</option>
-                <option value="checked-in">تم التسجيل</option>
-                <option value="in-progress">قيد التنفيذ</option>
-                <option value="completed">مكتمل</option>
-                <option value="cancelled">ملغى</option>
-              </select>
-              <input placeholder="سبب الزيارة" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className={inputClass} />
-              <input placeholder="ملاحظات" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputClass} />
-              <button disabled={createLoading} type="submit" className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2">
-                {createLoading ? (
-                  <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-                    جارٍ الحفظ...
-                  </>
-                ) : (
-                  <>
-                    <CalendarPlus className="h-4 w-4" />
-                    إضافة موعد
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-        </GlassCard>
       </div>
+
+
+      {/* Create Modal */}
+      {createModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-[28px] border border-foreground/10 bg-background/95 p-6 shadow-2xl">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary/80">New Appointment</p>
+                <h3 className="mt-2 text-xl font-bold text-foreground">حجز موعد جديد</h3>
+                <p className="mt-1 text-sm text-foreground/55">اختر المريض والطبيب وحدد التاريخ والوقت.</p>
+              </div>
+              <button type="button" onClick={() => setCreateModalOpen(false)} className="rounded-2xl border border-foreground/10 bg-foreground/5 px-4 py-2 text-sm font-semibold text-foreground/70 hover:bg-foreground/10">
+                إغلاق
+              </button>
+            </div>
+
+            {loading ? (
+              <SkeletonForm fields={7} />
+            ) : (
+              <form onSubmit={handleCreate} className="grid gap-3">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <select value={form.patient_id} onChange={(e) => setForm({ ...form, patient_id: e.target.value })} className={selectClass} required>
+                    <option value="">اختر المريض</option>
+                    {patients.map((p) => <option key={p.id} value={p.id}>{`${p.first_name ?? ""} ${p.last_name ?? ""}`}</option>)}
+                  </select>
+                  <select value={form.doctor_id} onChange={(e) => setForm({ ...form, doctor_id: e.target.value })} className={selectClass} required>
+                    <option value="">اختر الطبيب</option>
+                    {doctors.map((d) => <option key={d.id} value={d.id}>{`${d.first_name ?? ""} ${d.last_name ?? ""} — ${formatSpecialtyBilingual(d.specialty ?? "عام")}`}</option>)}
+                  </select>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-3">
+                  <input type="date" value={form.appointment_date} onChange={(e) => setForm({ ...form, appointment_date: e.target.value })} className={inputClass} required />
+                  <input type="time" value={form.appointment_time} onChange={(e) => setForm({ ...form, appointment_time: e.target.value })} className={inputClass} required />
+                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className={selectClass}>
+                    <option value="scheduled">مجدول</option>
+                    <option value="checked-in">تم التسجيل</option>
+                    <option value="in-progress">قيد التنفيذ</option>
+                    <option value="completed">مكتمل</option>
+                    <option value="cancelled">ملغى</option>
+                  </select>
+                </div>
+
+                <input placeholder="سبب الزيارة" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className={inputClass} />
+                <textarea placeholder="ملاحظات" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputClass + " min-h-[90px] resize-none py-3"} />
+
+                <div className="mt-2 flex gap-2">
+                  <button type="button" onClick={() => setCreateModalOpen(false)} className="h-11 flex-1 rounded-2xl border border-foreground/10 bg-foreground/5 text-sm font-semibold text-foreground hover:bg-foreground/10">
+                    إلغاء
+                  </button>
+                  <button disabled={createLoading} type="submit" className="flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-white disabled:opacity-60">
+                    {createLoading ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                        جارٍ الحفظ...
+                      </>
+                    ) : (
+                      <>
+                        <CalendarPlus className="h-4 w-4" />
+                        إضافة موعد
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {editModalOpen && editingAppt && (
