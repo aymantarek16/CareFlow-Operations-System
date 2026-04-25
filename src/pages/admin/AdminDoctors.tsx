@@ -12,6 +12,8 @@ import { formatDateTime, splitName } from "@/lib/helpers";
 import { formatSpecialtyBilingual } from "@/lib/specialties";
 import { createUserAsAdmin } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
+import { adminCreateDoctorSchema, safeValidate } from "@/lib/validation";
+import { friendlyErrorMessage } from "@/lib/sanitize";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import type { DoctorProfile } from "@/lib/types";
@@ -58,28 +60,36 @@ export default function AdminDoctors() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const validation = safeValidate(adminCreateDoctorSchema, form);
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
+      return;
+    }
+    const clean = validation.data;
+
     setCreating(true);
     try {
       const { uid, error } = await createUserAsAdmin({
-        email: form.email,
-        password: form.password,
-        name: form.fullName,
+        email: clean.email,
+        password: clean.password,
+        name: clean.fullName,
         role: "doctor",
       });
       if (error || !uid) {
-        toast.error("فشل إنشاء الحساب", { description: error ?? undefined });
+        toast.error("فشل إنشاء الحساب", { description: friendlyErrorMessage(error) });
         setCreating(false);
         return;
       }
-      const names = splitName(form.fullName);
+      const names = splitName(clean.fullName);
       const { error: uErr } = await supabase
         .from("users")
         .upsert(
-          { id: uid, name: form.fullName, email: form.email, role: "doctor" },
+          { id: uid, name: clean.fullName, email: clean.email, role: "doctor" },
           { onConflict: "id" },
         );
       if (uErr) {
-        toast.error("فشل حفظ بيانات المستخدم", { description: uErr.message });
+        toast.error("فشل حفظ بيانات المستخدم", { description: friendlyErrorMessage(uErr.message) });
         setCreating(false);
         return;
       }
@@ -87,11 +97,11 @@ export default function AdminDoctors() {
         user_id: uid,
         first_name: names.firstName,
         last_name: names.lastName,
-        specialty: form.specialty,
-        phone: form.phone,
+        specialty: clean.specialty,
+        phone: clean.phone,
       });
       if (dErr) {
-        toast.error("فشل حفظ ملف الطبيب", { description: dErr.message });
+        toast.error("فشل حفظ ملف الطبيب", { description: friendlyErrorMessage(dErr.message) });
         setCreating(false);
         return;
       }
@@ -99,7 +109,7 @@ export default function AdminDoctors() {
       setForm({ fullName: "", email: "", password: "", specialty: "", phone: "" });
       refetch();
     } catch (err) {
-      toast.error("حدث خطأ", { description: err instanceof Error ? err.message : "خطأ غير معروف" });
+      toast.error("حدث خطأ", { description: friendlyErrorMessage(err) });
     }
     setCreating(false);
   };

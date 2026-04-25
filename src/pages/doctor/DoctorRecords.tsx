@@ -15,6 +15,21 @@ import type { MedicalRecord } from "@/lib/types";
 import { Pencil, Trash2, Plus, Search, FileText, Stethoscope, Printer, Download } from "lucide-react";
 import { toast } from "sonner";
 import { generatePdfReport } from "@/lib/pdf";
+import { z } from "zod";
+import { optionalMultilineSchema, safeValidate, shortTextSchema } from "@/lib/validation";
+
+const medicalRecordSchema = z.object({
+  patient_id: z.string().uuid("مريض غير صالح"),
+  diagnosis: shortTextSchema(500),
+  notes: optionalMultilineSchema(4000),
+  attachments: optionalMultilineSchema(2000),
+});
+
+const editMedicalRecordSchema = z.object({
+  diagnosis: shortTextSchema(500),
+  notes: optionalMultilineSchema(4000),
+  attachments: optionalMultilineSchema(2000),
+});
 
 export default function DoctorRecords() {
   const { appUser } = useAuth();
@@ -86,13 +101,20 @@ export default function DoctorRecords() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!doctor) return;
-    await createRecord({ 
-      ...form, 
+
+    const validation = safeValidate(medicalRecordSchema, form);
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
+      return;
+    }
+    const clean = validation.data;
+
+    await createRecord({
       doctor_id: doctor.id,
-      patient_id: form.patient_id,
-      diagnosis: form.diagnosis,
-      notes: form.notes || null,
-      attachments: form.attachments || null,
+      patient_id: clean.patient_id,
+      diagnosis: clean.diagnosis,
+      notes: clean.notes || null,
+      attachments: clean.attachments || null,
     });
   };
 
@@ -109,7 +131,13 @@ export default function DoctorRecords() {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingRecord) return;
-    await updateRecord(editingRecord.id, editForm);
+
+    const validation = safeValidate(editMedicalRecordSchema, editForm);
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
+      return;
+    }
+    await updateRecord(editingRecord.id, validation.data);
   };
 
   const handleDeleteClick = (record: MedicalRecord) => {

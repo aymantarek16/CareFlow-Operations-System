@@ -7,6 +7,15 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatDate, formatTime } from "@/lib/helpers";
 import { formatSpecialtyBilingual } from "@/lib/specialties";
 import type { AppointmentRecord, PatientProfile, DoctorProfile } from "@/lib/types";
+import { appointmentStatusSchema, optionalMultilineSchema, safeValidate } from "@/lib/validation";
+import { friendlyErrorMessage } from "@/lib/sanitize";
+import { z } from "zod";
+import { toast } from "sonner";
+
+const updateAppointmentSchema = z.object({
+  status: appointmentStatusSchema,
+  notes: optionalMultilineSchema(2000),
+});
 
 export default function AdminAppointmentDetail() {
   const { id } = useParams();
@@ -32,9 +41,25 @@ export default function AdminAppointmentDetail() {
 
   const handleUpdate = async () => {
     if (!id) return;
+
+    const validation = safeValidate(updateAppointmentSchema, { status, notes });
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
+      return;
+    }
+    const clean = validation.data;
+
     setSaving(true);
-    await supabase.from("appointments").update({ status, notes }).eq("id", id);
-    setAppointment((prev) => prev ? { ...prev, status, notes } : prev);
+    const { error } = await supabase
+      .from("appointments")
+      .update({ status: clean.status, notes: clean.notes })
+      .eq("id", id);
+    if (error) {
+      toast.error("تعذّر تحديث الموعد", { description: friendlyErrorMessage(error.message) });
+    } else {
+      setAppointment((prev) => (prev ? { ...prev, status: clean.status, notes: clean.notes } : prev));
+      toast.success("تم تحديث الموعد");
+    }
     setSaving(false);
   };
 

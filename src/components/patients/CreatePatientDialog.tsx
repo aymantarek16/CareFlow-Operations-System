@@ -3,6 +3,8 @@ import { supabase } from "@/lib/supabase";
 import { splitName } from "@/lib/helpers";
 import { createUserAsAdmin } from "@/lib/adminAuth";
 import { useEscapeClose } from "@/hooks/useEscapeClose";
+import { adminCreatePatientSchema, safeValidate } from "@/lib/validation";
+import { friendlyErrorMessage } from "@/lib/sanitize";
 import { toast } from "sonner";
 import { UserPlus, X } from "lucide-react";
 
@@ -35,29 +37,33 @@ export function CreatePatientDialog({ open, onOpenChange, onCreated }: CreatePat
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.fullName.trim()) {
-      toast.error("أدخل اسم المريض");
+
+    const validation = safeValidate(adminCreatePatientSchema, form);
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
       return;
     }
+    const clean = validation.data;
+
     setSubmitting(true);
     try {
       const { uid, error } = await createUserAsAdmin({
-        email: form.email,
-        password: form.password,
-        name: form.fullName,
+        email: clean.email,
+        password: clean.password,
+        name: clean.fullName,
         role: "patient",
       });
       if (error || !uid) {
-        toast.error("فشل إنشاء الحساب", { description: error ?? undefined });
+        toast.error("فشل إنشاء الحساب", { description: friendlyErrorMessage(error) });
         setSubmitting(false);
         return;
       }
-      const names = splitName(form.fullName);
+      const names = splitName(clean.fullName);
 
       await supabase
         .from("users")
         .upsert(
-          { id: uid, name: form.fullName, email: form.email, role: "patient" },
+          { id: uid, name: clean.fullName, email: clean.email, role: "patient" },
           { onConflict: "id" },
         );
 
@@ -65,20 +71,20 @@ export function CreatePatientDialog({ open, onOpenChange, onCreated }: CreatePat
         user_id: uid,
         first_name: names.firstName,
         last_name: names.lastName,
-        phone: form.phone || null,
-        gender: form.gender,
-        date_of_birth: form.dateOfBirth || null,
+        phone: clean.phone || null,
+        gender: clean.gender,
+        date_of_birth: clean.dateOfBirth || null,
       });
 
       if (patientErr) {
-        toast.error("تم إنشاء الحساب لكن فشل حفظ بيانات المريض", { description: patientErr.message });
+        toast.error("تم إنشاء الحساب لكن فشل حفظ بيانات المريض", { description: friendlyErrorMessage(patientErr.message) });
       } else {
         toast.success("تم إنشاء حساب المريض بنجاح");
       }
       onCreated?.();
       onOpenChange(false);
     } catch (err) {
-      toast.error("حدث خطأ", { description: err instanceof Error ? err.message : "خطأ غير معروف" });
+      toast.error("حدث خطأ", { description: friendlyErrorMessage(err) });
     } finally {
       setSubmitting(false);
     }
@@ -121,6 +127,8 @@ export function CreatePatientDialog({ open, onOpenChange, onCreated }: CreatePat
             value={form.fullName}
             onChange={(e) => setForm({ ...form, fullName: e.target.value })}
             required
+            maxLength={80}
+            autoComplete="name"
             className={inputClass}
           />
           <input
@@ -129,21 +137,28 @@ export function CreatePatientDialog({ open, onOpenChange, onCreated }: CreatePat
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             required
+            maxLength={254}
+            autoComplete="email"
             className={inputClass}
           />
           <input
             type="password"
-            placeholder="كلمة المرور"
+            placeholder="كلمة المرور (8 أحرف على الأقل)"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             required
-            minLength={6}
+            minLength={8}
+            maxLength={128}
+            autoComplete="new-password"
             className={inputClass}
           />
           <input
             placeholder="الهاتف"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            maxLength={32}
+            inputMode="tel"
+            autoComplete="tel"
             className={inputClass}
           />
           <div className="grid grid-cols-2 gap-3">

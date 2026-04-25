@@ -11,6 +11,8 @@ import { useDeleteMutation, useUpdateMutation } from "@/hooks/useMutation";
 import { formatDateTime, splitName } from "@/lib/helpers";
 import { createUserAsAdmin } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
+import { adminCreatePatientSchema, safeValidate } from "@/lib/validation";
+import { friendlyErrorMessage } from "@/lib/sanitize";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import type { PatientProfile } from "@/lib/types";
@@ -56,28 +58,36 @@ export default function AdminPatients() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const validation = safeValidate(adminCreatePatientSchema, form);
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
+      return;
+    }
+    const clean = validation.data;
+
     setCreating(true);
     try {
       const { uid, error } = await createUserAsAdmin({
-        email: form.email,
-        password: form.password,
-        name: form.fullName,
+        email: clean.email,
+        password: clean.password,
+        name: clean.fullName,
         role: "patient",
       });
       if (error || !uid) {
-        toast.error("فشل إنشاء الحساب", { description: error ?? undefined });
+        toast.error("فشل إنشاء الحساب", { description: friendlyErrorMessage(error) });
         setCreating(false);
         return;
       }
-      const names = splitName(form.fullName);
+      const names = splitName(clean.fullName);
       const { error: uErr } = await supabase
         .from("users")
         .upsert(
-          { id: uid, name: form.fullName, email: form.email, role: "patient" },
+          { id: uid, name: clean.fullName, email: clean.email, role: "patient" },
           { onConflict: "id" },
         );
       if (uErr) {
-        toast.error("فشل حفظ بيانات المستخدم", { description: uErr.message });
+        toast.error("فشل حفظ بيانات المستخدم", { description: friendlyErrorMessage(uErr.message) });
         setCreating(false);
         return;
       }
@@ -85,12 +95,12 @@ export default function AdminPatients() {
         user_id: uid,
         first_name: names.firstName,
         last_name: names.lastName,
-        phone: form.phone,
-        gender: form.gender,
-        date_of_birth: form.dateOfBirth,
+        phone: clean.phone,
+        gender: clean.gender,
+        date_of_birth: clean.dateOfBirth,
       });
       if (pErr) {
-        toast.error("فشل حفظ ملف المريض", { description: pErr.message });
+        toast.error("فشل حفظ ملف المريض", { description: friendlyErrorMessage(pErr.message) });
         setCreating(false);
         return;
       }
@@ -98,7 +108,7 @@ export default function AdminPatients() {
       setForm({ fullName: "", email: "", password: "", phone: "", gender: "male", dateOfBirth: "" });
       refetch();
     } catch (err) {
-      toast.error("حدث خطأ", { description: err instanceof Error ? err.message : "خطأ غير معروف" });
+      toast.error("حدث خطأ", { description: friendlyErrorMessage(err) });
     }
     setCreating(false);
   };
@@ -210,15 +220,15 @@ export default function AdminPatients() {
             <SkeletonForm fields={6} />
           ) : (
             <form onSubmit={handleCreate} className="grid gap-3">
-              <input placeholder="الاسم بالكامل" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required className={inputClass} />
-              <input placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required className={inputClass} />
-              <input placeholder="كلمة المرور" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required className={inputClass} />
-              <input placeholder="الهاتف" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required className={inputClass} />
+              <input placeholder="الاسم بالكامل" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required maxLength={80} autoComplete="name" className={inputClass} />
+              <input placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required maxLength={254} autoComplete="email" className={inputClass} />
+              <input placeholder="كلمة المرور (8 أحرف على الأقل)" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={8} maxLength={128} autoComplete="new-password" className={inputClass} />
+              <input placeholder="الهاتف" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required maxLength={32} autoComplete="tel" inputMode="tel" className={inputClass} />
               <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} className={inputClass + " bg-[#0b1f19]"}>
                 <option value="male">ذكر</option>
                 <option value="female">أنثى</option>
               </select>
-              <input type="date" value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} required className={inputClass} />
+              <input type="date" value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} required max={new Date().toISOString().slice(0, 10)} className={inputClass} />
               <button disabled={creating} type="submit" className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2">
                 {creating ? (
                   <>

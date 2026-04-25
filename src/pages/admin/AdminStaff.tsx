@@ -11,6 +11,9 @@ import { useDeleteMutation, useUpdateMutation } from "@/hooks/useMutation";
 import { formatDateTime } from "@/lib/helpers";
 import { createUserAsAdmin } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
+import { adminCreateStaffSchema, fullNameSchema, roleSchema, safeValidate } from "@/lib/validation";
+import { friendlyErrorMessage } from "@/lib/sanitize";
+import { z } from "zod";
 import { toast } from "sonner";
 import type { AppUser, AppRole } from "@/lib/types";
 import {
@@ -102,18 +105,38 @@ export default function AdminStaff() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Staff role must be one of the two allowed values; never trust the
+    // form state alone in case the <select> is tampered with.
+    if (form.role !== "admin" && form.role !== "receptionist") {
+      toast.error("الدور غير صالح");
+      return;
+    }
+
+    const validation = safeValidate(adminCreateStaffSchema, {
+      fullName: form.fullName,
+      email: form.email,
+      password: form.password,
+      phone: "",
+    });
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
+      return;
+    }
+    const clean = validation.data;
+
     setCreating(true);
 
     try {
       const { uid, error } = await createUserAsAdmin({
-        email: form.email,
-        password: form.password,
-        name: form.fullName,
+        email: clean.email,
+        password: clean.password,
+        name: clean.fullName,
         role: form.role,
       });
 
       if (error || !uid) {
-        toast.error("فشل إنشاء الحساب", { description: error ?? undefined });
+        toast.error("فشل إنشاء الحساب", { description: friendlyErrorMessage(error) });
         setCreating(false);
         return;
       }
@@ -121,8 +144,8 @@ export default function AdminStaff() {
       const { error: upsertErr } = await supabase.from("users").upsert(
         {
           id: uid,
-          name: form.fullName,
-          email: form.email,
+          name: clean.fullName,
+          email: clean.email,
           role: form.role,
         },
         { onConflict: "id" }
@@ -130,7 +153,7 @@ export default function AdminStaff() {
 
       if (upsertErr) {
         toast.error("تم إنشاء الحساب لكن فشل حفظ البيانات", {
-          description: upsertErr.message,
+          description: friendlyErrorMessage(upsertErr.message),
         });
       } else {
         toast.success(`تم إنشاء حساب ${ROLE_LABEL[form.role]} بنجاح`);
@@ -146,7 +169,7 @@ export default function AdminStaff() {
       refetch();
     } catch (err) {
       toast.error("حدث خطأ", {
-        description: err instanceof Error ? err.message : "خطأ غير معروف",
+        description: friendlyErrorMessage(err),
       });
     }
 
@@ -167,9 +190,18 @@ export default function AdminStaff() {
 
     if (!editingStaff) return;
 
+    const editValidation = safeValidate(
+      z.object({ name: fullNameSchema, role: roleSchema }),
+      editForm,
+    );
+    if (!editValidation.data) {
+      toast.error("بيانات غير صالحة", { description: editValidation.error ?? undefined });
+      return;
+    }
+
     await updateStaff(editingStaff.id, {
-      name: editForm.name,
-      role: editForm.role,
+      name: editValidation.data.name,
+      role: editValidation.data.role,
     });
   };
 

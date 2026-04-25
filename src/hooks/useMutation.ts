@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { friendlyErrorMessage } from "@/lib/sanitize";
 
 type MutationResult<T> = {
   data: T | null;
@@ -34,12 +35,13 @@ export function useDeleteMutation<T extends { id: string }>(
 
         if (supabaseError) {
           const errorMsg = supabaseError.message;
-          setError(errorMsg);
-          toast.error(options?.errorMessage || `فشل حذف ${table}`, {
-            description: errorMsg,
+          const friendly = friendlyErrorMessage(errorMsg);
+          setError(friendly);
+          toast.error(options?.errorMessage || `فشل الحذف`, {
+            description: friendly,
           });
-          options?.onError?.(errorMsg);
-          return { data: null, error: errorMsg };
+          options?.onError?.(friendly);
+          return { data: null, error: friendly };
         }
 
         toast.success(options?.successMessage || "تم الحذف بنجاح", {
@@ -48,13 +50,13 @@ export function useDeleteMutation<T extends { id: string }>(
         options?.onSuccess?.();
         return { data: data as T, error: null };
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "حدث خطأ غير متوقع";
-        setError(errorMsg);
+        const friendly = friendlyErrorMessage(err);
+        setError(friendly);
         toast.error(options?.errorMessage || "فشل الحذف", {
-          description: errorMsg,
+          description: friendly,
         });
-        options?.onError?.(errorMsg);
-        return { data: null, error: errorMsg };
+        options?.onError?.(friendly);
+        return { data: null, error: friendly };
       } finally {
         setLoading(false);
       }
@@ -91,13 +93,13 @@ export function useUpdateMutation<T extends { id: string }>(
           .single();
 
         if (supabaseError) {
-          const errorMsg = supabaseError.message;
-          setError(errorMsg);
-          toast.error(options?.errorMessage || `فشل تحديث ${table}`, {
-            description: errorMsg,
+          const friendly = friendlyErrorMessage(supabaseError.message);
+          setError(friendly);
+          toast.error(options?.errorMessage || `فشل التحديث`, {
+            description: friendly,
           });
-          options?.onError?.(errorMsg);
-          return { data: null, error: errorMsg };
+          options?.onError?.(friendly);
+          return { data: null, error: friendly };
         }
 
         toast.success(options?.successMessage || "تم التحديث بنجاح", {
@@ -106,13 +108,13 @@ export function useUpdateMutation<T extends { id: string }>(
         options?.onSuccess?.();
         return { data: data as T, error: null };
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "حدث خطأ غير متوقع";
-        setError(errorMsg);
+        const friendly = friendlyErrorMessage(err);
+        setError(friendly);
         toast.error(options?.errorMessage || "فشل التحديث", {
-          description: errorMsg,
+          description: friendly,
         });
-        options?.onError?.(errorMsg);
-        return { data: null, error: errorMsg };
+        options?.onError?.(friendly);
+        return { data: null, error: friendly };
       } finally {
         setLoading(false);
       }
@@ -148,13 +150,13 @@ export function useInsertMutation<T>(
           .single();
 
         if (supabaseError) {
-          const errorMsg = supabaseError.message;
-          setError(errorMsg);
-          toast.error(options?.errorMessage || `فشل إضافة ${table}`, {
-            description: errorMsg,
+          const friendly = friendlyErrorMessage(supabaseError.message);
+          setError(friendly);
+          toast.error(options?.errorMessage || `فشل الإضافة`, {
+            description: friendly,
           });
-          options?.onError?.(errorMsg);
-          return { data: null, error: errorMsg };
+          options?.onError?.(friendly);
+          return { data: null, error: friendly };
         }
 
         toast.success(options?.successMessage || "تم الإضافة بنجاح", {
@@ -163,13 +165,13 @@ export function useInsertMutation<T>(
         options?.onSuccess?.();
         return { data: data as T, error: null };
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "حدث خطأ غير متوقع";
-        setError(errorMsg);
+        const friendly = friendlyErrorMessage(err);
+        setError(friendly);
         toast.error(options?.errorMessage || "فشل الإضافة", {
-          description: errorMsg,
+          description: friendly,
         });
-        options?.onError?.(errorMsg);
-        return { data: null, error: errorMsg };
+        options?.onError?.(friendly);
+        return { data: null, error: friendly };
       } finally {
         setLoading(false);
       }

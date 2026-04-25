@@ -4,7 +4,11 @@ import { useEffect } from "react";
 const NotFound = () => {
   const location = useLocation();
   useEffect(() => {
-    console.error("404 Error:", location.pathname);
+    // Only log unknown routes during development; production stays silent so
+    // we don't leak path patterns to anyone watching DevTools.
+    if (import.meta.env.DEV) {
+      console.warn("404:", location.pathname);
+    }
   }, [location.pathname]);
 
   return (

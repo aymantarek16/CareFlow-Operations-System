@@ -12,6 +12,26 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatDateTime } from "@/lib/helpers";
 import type { Prescription } from "@/lib/types";
 import { Pencil, Trash2, Plus, Search, Pill, Syringe } from "lucide-react";
+import { toast } from "sonner";
+import { z } from "zod";
+import { optionalMultilineSchema, optionalShortTextSchema, safeValidate, shortTextSchema } from "@/lib/validation";
+
+const prescriptionSchema = z.object({
+  patient_id: z.string().uuid("مريض غير صالح"),
+  medication: shortTextSchema(200),
+  dosage: optionalShortTextSchema(120),
+  frequency: optionalShortTextSchema(120),
+  duration: optionalShortTextSchema(120),
+  instructions: optionalMultilineSchema(2000),
+});
+
+const editPrescriptionSchema = z.object({
+  medication: shortTextSchema(200),
+  dosage: optionalShortTextSchema(120),
+  frequency: optionalShortTextSchema(120),
+  duration: optionalShortTextSchema(120),
+  instructions: optionalMultilineSchema(2000),
+});
 
 export default function DoctorPrescriptions() {
   const { appUser } = useAuth();
@@ -98,10 +118,16 @@ export default function DoctorPrescriptions() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!doctor) return;
+
+    const validation = safeValidate(prescriptionSchema, form);
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
+      return;
+    }
+
     await createPrescription({
-      ...form,
+      ...validation.data,
       doctor_id: doctor.id,
-      patient_id: form.patient_id,
     });
   };
 
@@ -120,7 +146,13 @@ export default function DoctorPrescriptions() {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPrescription) return;
-    await updatePrescription(editingPrescription.id, editForm);
+
+    const validation = safeValidate(editPrescriptionSchema, editForm);
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
+      return;
+    }
+    await updatePrescription(editingPrescription.id, validation.data);
   };
 
   const handleDeleteClick = (prescription: Prescription) => {
