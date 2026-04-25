@@ -15,6 +15,21 @@ import type { MedicalRecord } from "@/lib/types";
 import { Pencil, Trash2, Search, FileText, Printer, Download, X, Save, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 import { generatePdfReport } from "@/lib/pdf";
+import { z } from "zod";
+import { optionalMultilineSchema, safeValidate, shortTextSchema } from "@/lib/validation";
+
+const medicalRecordSchema = z.object({
+  patient_id: z.string().uuid("مريض غير صالح"),
+  diagnosis: shortTextSchema(500),
+  notes: optionalMultilineSchema(4000),
+  attachments: optionalMultilineSchema(2000),
+});
+
+const editMedicalRecordSchema = z.object({
+  diagnosis: shortTextSchema(500),
+  notes: optionalMultilineSchema(4000),
+  attachments: optionalMultilineSchema(2000),
+});
 
 type RecordFormState = {
   patient_id: string;
@@ -122,6 +137,24 @@ export default function DoctorRecords() {
     successMessage: "تم حذف السجل الطبي بنجاح",
   });
 
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!doctor) return;
+
+    const validation = safeValidate(medicalRecordSchema, form);
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
+      return;
+    }
+    const clean = validation.data;
+
+    await createRecord({
+      doctor_id: doctor.id,
+      patient_id: clean.patient_id,
+      diagnosis: clean.diagnosis,
+      notes: clean.notes || null,
+      attachments: clean.attachments || null,
+    });
   const openCreateModal = () => {
     setEditingRecord(null);
     setForm(emptyForm);
@@ -140,6 +173,16 @@ export default function DoctorRecords() {
     setRecordModalOpen(true);
   };
 
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRecord) return;
+
+    const validation = safeValidate(editMedicalRecordSchema, editForm);
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
+      return;
+    }
+    await updateRecord(editingRecord.id, validation.data);
   function closeRecordModal() {
     setRecordModalOpen(false);
     setEditingRecord(null);

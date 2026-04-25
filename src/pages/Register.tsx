@@ -3,6 +3,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { splitName } from "@/lib/helpers";
+import { registerPatientSchema, safeValidate } from "@/lib/validation";
+import { friendlyErrorMessage } from "@/lib/sanitize";
+import { tryAction, formatRetryAfter } from "@/lib/rateLimit";
 import { Sparkles } from "lucide-react";
 
 export default function RegisterPage() {
@@ -15,47 +18,82 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setLoading(true);
 
+    // Soft client-side throttle to discourage automated mass-registration.
+    const gate = tryAction("register", 5, 60_000, 5 * 60_000);
+    if (!gate.allowed) {
+      setError(
+        `محاولات كثيرة لإنشاء حسابات. حاول مرة أخرى بعد ${formatRetryAfter(gate.retryAfterMs)}.`,
+      );
+      return;
+    }
+
+    const validation = safeValidate(registerPatientSchema, form);
+    if (!validation.data) {
+      setError(validation.error ?? "بيانات غير صالحة");
+      return;
+    }
+    const clean = validation.data;
+
+    setLoading(true);
     try {
       const { data, error: signUpErr } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: { data: { name: form.fullName, role: "patient" } },
+        email: clean.email,
+        password: clean.password,
+        options: { data: { name: clean.fullName, role: "patient" } },
       });
 
-      if (signUpErr) { setError(signUpErr.message); setLoading(false); return; }
-      if (!data.user) { setError("فشل إنشاء الحساب"); setLoading(false); return; }
+      if (signUpErr) {
+        setError(friendlyErrorMessage(signUpErr.message));
+        setLoading(false);
+        return;
+      }
+      if (!data.user) {
+        setError("تعذّر إنشاء الحساب. حاول مرة أخرى.");
+        setLoading(false);
+        return;
+      }
 
       const userId = data.user.id;
-      const names = splitName(form.fullName);
+      const names = splitName(clean.fullName);
 
       // Insert into users table
       const { error: usersErr } = await supabase.from("users").insert({
-        id: userId, name: form.fullName, email: form.email, role: "patient",
+        id: userId,
+        name: clean.fullName,
+        email: clean.email,
+        role: "patient",
       });
 
-      if (usersErr) { setError(usersErr.message); setLoading(false); return; }
+      if (usersErr) {
+        setError(friendlyErrorMessage(usersErr.message));
+        setLoading(false);
+        return;
+      }
 
       // Insert into patients table
       const { error: patientsErr } = await supabase.from("patients").insert({
         user_id: userId,
         first_name: names.firstName,
         last_name: names.lastName,
-        phone: form.phone,
-        gender: form.gender,
-        date_of_birth: form.dateOfBirth,
+        phone: clean.phone,
+        gender: clean.gender,
+        date_of_birth: clean.dateOfBirth,
       });
 
-      if (patientsErr) { setError(patientsErr.message); setLoading(false); return; }
+      if (patientsErr) {
+        setError(friendlyErrorMessage(patientsErr.message));
+        setLoading(false);
+        return;
+      }
 
       // Auto sign-in
-      const { error: loginErr } = await signIn(form.email, form.password);
+      const { error: loginErr } = await signIn(clean.email, clean.password);
       if (loginErr) {
         navigate("/login");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "خطأ غير متوقع");
+      setError(friendlyErrorMessage(err));
     }
     setLoading(false);
   };
@@ -73,15 +111,15 @@ export default function RegisterPage() {
         <p className="mt-2 text-sm text-foreground/55">سجل بياناتك للحصول على حساب في النظام</p>
 
         <form onSubmit={handleSubmit} className="mt-6 grid gap-3">
-          <input placeholder="الاسم بالكامل" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required className={inputClass} />
-          <input placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required className={inputClass} />
-          <input placeholder="كلمة المرور" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required className={inputClass} />
-          <input placeholder="الهاتف" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required className={inputClass} />
+          <input placeholder="الاسم بالكامل" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required maxLength={80} autoComplete="name" className={inputClass} />
+          <input placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required maxLength={254} autoComplete="email" className={inputClass} />
+          <input placeholder="كلمة المرور (8 أحرف على الأقل، حروف وأرقام)" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required maxLength={128} autoComplete="new-password" className={inputClass} />
+          <input placeholder="الهاتف" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required maxLength={32} autoComplete="tel" inputMode="tel" className={inputClass} />
           <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} className={inputClass + " bg-[#0b1f19]"}>
             <option value="male">ذكر</option>
             <option value="female">أنثى</option>
           </select>
-          <input type="date" value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} required className={inputClass} />
+          <input type="date" value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} required max={new Date().toISOString().slice(0, 10)} className={inputClass} />
 
           {error && <p className="text-sm text-rose-400 bg-rose-400/10 rounded-xl px-4 py-2">{error}</p>}
 

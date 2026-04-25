@@ -2,8 +2,24 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { usePatients } from "@/hooks/useData";
 import { useEscapeClose } from "@/hooks/useEscapeClose";
+import {
+  invoiceAmountSchema,
+  invoiceStatusSchema,
+  optionalMultilineSchema,
+  safeValidate,
+} from "@/lib/validation";
+import { friendlyErrorMessage, sanitizeDate } from "@/lib/sanitize";
+import { z } from "zod";
 import { toast } from "sonner";
 import { CreditCard, X } from "lucide-react";
+
+const createInvoiceSchema = z.object({
+  patient_id: z.string().uuid("مريض غير صالح"),
+  amount: invoiceAmountSchema.refine((v) => v > 0, { message: "أدخل مبلغاً أكبر من صفر" }),
+  status: invoiceStatusSchema,
+  issue_date: z.string().transform(sanitizeDate),
+  notes: optionalMultilineSchema(2000),
+});
 
 type InvoiceStatus = "pending" | "paid" | "cancelled" | "refunded";
 
@@ -49,28 +65,26 @@ export function CreateInvoiceDialog({ open, onOpenChange, onCreated }: CreateInv
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.patient_id) {
-      toast.error("اختر المريض أولاً");
+
+    const validation = safeValidate(createInvoiceSchema, form);
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
       return;
     }
-    const amountNum = Number(form.amount);
-    if (!Number.isFinite(amountNum) || amountNum <= 0) {
-      toast.error("أدخل مبلغاً صحيحاً أكبر من صفر");
-      return;
-    }
+    const clean = validation.data;
 
     setSubmitting(true);
     const { error } = await supabase.from("invoices").insert({
-      patient_id: form.patient_id,
-      amount: amountNum,
-      status: form.status,
-      issue_date: form.issue_date || null,
-      notes: form.notes || null,
+      patient_id: clean.patient_id,
+      amount: clean.amount,
+      status: clean.status,
+      issue_date: clean.issue_date || null,
+      notes: clean.notes || null,
     });
     setSubmitting(false);
 
     if (error) {
-      toast.error("فشل إنشاء الفاتورة", { description: error.message });
+      toast.error("فشل إنشاء الفاتورة", { description: friendlyErrorMessage(error.message) });
       return;
     }
 

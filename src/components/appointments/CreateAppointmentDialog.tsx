@@ -2,9 +2,29 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { usePatients, useDoctors } from "@/hooks/useData";
 import { useEscapeClose } from "@/hooks/useEscapeClose";
+import {
+  appointmentStatusSchema,
+  futureOrTodayDateSchema,
+  optionalMultilineSchema,
+  optionalShortTextSchema,
+  safeValidate,
+  timeSchema,
+} from "@/lib/validation";
+import { friendlyErrorMessage } from "@/lib/sanitize";
+import { z } from "zod";
 import { toast } from "sonner";
 import { CalendarPlus, X } from "lucide-react";
 import { formatSpecialtyBilingual } from "@/lib/specialties";
+
+const createAppointmentSchema = z.object({
+  patient_id: z.string().uuid("مريض غير صالح"),
+  doctor_id: z.string().uuid("طبيب غير صالح"),
+  appointment_date: futureOrTodayDateSchema,
+  appointment_time: timeSchema,
+  status: appointmentStatusSchema,
+  reason: optionalShortTextSchema(200),
+  notes: optionalMultilineSchema(2000),
+});
 
 type AppointmentStatus =
   | "scheduled"
@@ -73,33 +93,28 @@ export function CreateAppointmentDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.patient_id) {
-      toast.error("اختر المريض أولاً");
+
+    const validation = safeValidate(createAppointmentSchema, form);
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
       return;
     }
-    if (!form.doctor_id) {
-      toast.error("اختر الطبيب أولاً");
-      return;
-    }
-    if (!form.appointment_date || !form.appointment_time) {
-      toast.error("حدد التاريخ والوقت");
-      return;
-    }
+    const clean = validation.data;
 
     setSubmitting(true);
     const { error } = await supabase.from("appointments").insert({
-      patient_id: form.patient_id,
-      doctor_id: form.doctor_id,
-      appointment_date: form.appointment_date,
-      appointment_time: form.appointment_time,
-      status: form.status,
-      reason: form.reason || null,
-      notes: form.notes || null,
+      patient_id: clean.patient_id,
+      doctor_id: clean.doctor_id,
+      appointment_date: clean.appointment_date,
+      appointment_time: clean.appointment_time,
+      status: clean.status,
+      reason: clean.reason || null,
+      notes: clean.notes || null,
     });
     setSubmitting(false);
 
     if (error) {
-      toast.error("فشل إنشاء الموعد", { description: error.message });
+      toast.error("فشل إنشاء الموعد", { description: friendlyErrorMessage(error.message) });
       return;
     }
 

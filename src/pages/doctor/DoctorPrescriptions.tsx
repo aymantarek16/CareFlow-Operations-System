@@ -11,6 +11,27 @@ import { useDeleteMutation, useUpdateMutation, useInsertMutation } from "@/hooks
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDateTime } from "@/lib/helpers";
 import type { Prescription } from "@/lib/types";
+import { Pencil, Trash2, Plus, Search, Pill, Syringe } from "lucide-react";
+import { toast } from "sonner";
+import { z } from "zod";
+import { optionalMultilineSchema, optionalShortTextSchema, safeValidate, shortTextSchema } from "@/lib/validation";
+
+const prescriptionSchema = z.object({
+  patient_id: z.string().uuid("مريض غير صالح"),
+  medication: shortTextSchema(200),
+  dosage: optionalShortTextSchema(120),
+  frequency: optionalShortTextSchema(120),
+  duration: optionalShortTextSchema(120),
+  instructions: optionalMultilineSchema(2000),
+});
+
+const editPrescriptionSchema = z.object({
+  medication: shortTextSchema(200),
+  dosage: optionalShortTextSchema(120),
+  frequency: optionalShortTextSchema(120),
+  duration: optionalShortTextSchema(120),
+  instructions: optionalMultilineSchema(2000),
+});
 import { Pencil, Trash2, Plus, Search, Pill, Syringe, X } from "lucide-react";
 
 type PrescriptionFormState = {
@@ -112,6 +133,21 @@ export default function DoctorPrescriptions() {
     successMessage: "تم تحديث الوصفة الطبية بنجاح",
   });
 
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!doctor) return;
+
+    const validation = safeValidate(prescriptionSchema, form);
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
+      return;
+    }
+
+    await createPrescription({
+      ...validation.data,
+      doctor_id: doctor.id,
+    });
+  };
   const mutationLoading = createLoading || updateLoading;
 
   function openCreateModal() {
@@ -143,6 +179,14 @@ export default function DoctorPrescriptions() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editingPrescription) return;
+
+    const validation = safeValidate(editPrescriptionSchema, editForm);
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
+      return;
+    }
+    await updatePrescription(editingPrescription.id, validation.data);
     if (!doctor || !canSubmit) return;
 
     const payload = {

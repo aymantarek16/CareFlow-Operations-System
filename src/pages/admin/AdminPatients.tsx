@@ -15,6 +15,10 @@ import { useDeleteMutation, useUpdateMutation } from "@/hooks/useMutation";
 import { formatDateTime, splitName } from "@/lib/helpers";
 import { createUserAsAdmin } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
+import { adminCreatePatientSchema, safeValidate } from "@/lib/validation";
+import { friendlyErrorMessage } from "@/lib/sanitize";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import type { PatientProfile } from "@/lib/types";
 
 const initialCreateForm = {
@@ -105,6 +109,12 @@ export default function AdminPatients() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const validation = safeValidate(adminCreatePatientSchema, form);
+    if (!validation.data) {
+      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
+      return;
+    }
+    const clean = validation.data;
     const fullName = form.fullName.trim();
     const email = form.email.trim();
     const phone = form.phone.trim();
@@ -118,6 +128,9 @@ export default function AdminPatients() {
 
     try {
       const { uid, error } = await createUserAsAdmin({
+        email: clean.email,
+        password: clean.password,
+        name: clean.fullName,
         email,
         password: form.password,
         name: fullName,
@@ -125,6 +138,20 @@ export default function AdminPatients() {
       });
 
       if (error || !uid) {
+        toast.error("فشل إنشاء الحساب", { description: friendlyErrorMessage(error) });
+        setCreating(false);
+        return;
+      }
+      const names = splitName(clean.fullName);
+      const { error: uErr } = await supabase
+        .from("users")
+        .upsert(
+          { id: uid, name: clean.fullName, email: clean.email, role: "patient" },
+          { onConflict: "id" },
+        );
+      if (uErr) {
+        toast.error("فشل حفظ بيانات المستخدم", { description: friendlyErrorMessage(uErr.message) });
+        setCreating(false);
         toast.error("فشل إنشاء الحساب", { description: error ?? undefined });
         return;
       }
@@ -144,6 +171,13 @@ export default function AdminPatients() {
         user_id: uid,
         first_name: names.firstName,
         last_name: names.lastName,
+        phone: clean.phone,
+        gender: clean.gender,
+        date_of_birth: clean.dateOfBirth,
+      });
+      if (pErr) {
+        toast.error("فشل حفظ ملف المريض", { description: friendlyErrorMessage(pErr.message) });
+        setCreating(false);
         phone,
         gender: form.gender,
         date_of_birth: form.dateOfBirth,
@@ -159,6 +193,7 @@ export default function AdminPatients() {
       setCreateModalOpen(false);
       refetch();
     } catch (err) {
+      toast.error("حدث خطأ", { description: friendlyErrorMessage(err) });
       toast.error("حدث خطأ", { description: err instanceof Error ? err.message : "خطأ غير معروف" });
     } finally {
       setCreating(false);
@@ -254,6 +289,80 @@ export default function AdminPatients() {
               <UserPlus className="h-4 w-4" />
               إضافة مريض
             </button>
+          }
+        >
+          {loading ? (
+            <SkeletonTable rows={5} columns={7} />
+          ) : filtered.length === 0 ? (
+            <EmptyState 
+              variant={search ? "search" : "data"} 
+              action={
+                search ? undefined : (
+                  <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 px-4 py-2 text-sm font-semibold text-white">
+                    <Plus className="h-4 w-4" />
+                    إضافة أول مريض
+                  </button>
+                )
+              }
+            />
+          ) : (
+            <DataTable
+              columns={["الاسم", "الهاتف", "النوع", "تاريخ الميلاد", "تاريخ الإضافة", "الإجراءات"]}
+              rows={filtered.map((p) => [
+                `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || "-",
+                p.phone ?? "-",
+                p.gender === "male" ? "ذكر" : p.gender === "female" ? "أنثى" : "-",
+                p.date_of_birth ?? "-",
+                formatDateTime(p.created_at),
+                <div key={p.id} className="flex items-center gap-2">
+                  <Link to={`/admin/patients/${p.id}`} className="text-primary text-xs hover:underline">عرض</Link>
+                  <button 
+                    onClick={() => handleEditClick(p)}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-400/10 text-amber-400 hover:bg-amber-400/20"
+                    title="تعديل"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteClick(p)}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-400/10 text-rose-400 hover:bg-rose-400/20"
+                    title="حذف"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>,
+              ])}
+            />
+          )}
+        </GlassCard>
+
+        <GlassCard title="إضافة مريض جديد" subtitle="ينشئ الحساب تلقائياً">
+          {loading ? (
+            <SkeletonForm fields={6} />
+          ) : (
+            <form onSubmit={handleCreate} className="grid gap-3">
+              <input placeholder="الاسم بالكامل" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required maxLength={80} autoComplete="name" className={inputClass} />
+              <input placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required maxLength={254} autoComplete="email" className={inputClass} />
+              <input placeholder="كلمة المرور (8 أحرف على الأقل)" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={8} maxLength={128} autoComplete="new-password" className={inputClass} />
+              <input placeholder="الهاتف" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required maxLength={32} autoComplete="tel" inputMode="tel" className={inputClass} />
+              <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} className={inputClass + " bg-[#0b1f19]"}>
+                <option value="male">ذكر</option>
+                <option value="female">أنثى</option>
+              </select>
+              <input type="date" value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} required max={new Date().toISOString().slice(0, 10)} className={inputClass} />
+              <button disabled={creating} type="submit" className="h-11 rounded-2xl bg-gradient-to-r from-emerald-400 to-green-500 text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2">
+                {creating ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                    جاري الإنشاء...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4" />
+                    إضافة مريض
+                  </>
+                )}
+              </button>
           </div>
         }
       >

@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { routeByRole } from "@/lib/helpers";
+import { loginSchema, safeValidate } from "@/lib/validation";
+import { friendlyErrorMessage } from "@/lib/sanitize";
+import { tryAction, clearBucket, formatRetryAfter } from "@/lib/rateLimit";
 import {
   Sparkles,
   Building2,
@@ -9,6 +12,10 @@ import {
   Stethoscope,
   HeartPulse,
 } from "lucide-react";
+
+// Only expose demo credentials in development builds. Production users
+// should never see the canned passwords.
+const SHOW_DEMO_CREDENTIALS = import.meta.env.DEV;
 
 // Lightweight animated frame around cards instead of heavy full-page background
 function AnimatedFrame() {
@@ -42,13 +49,36 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Soft client-side throttle. Real abuse protection is enforced by
+    // Supabase Auth — this just blocks accidental rapid resubmits.
+    const gate = tryAction("login", 8, 60_000, 60_000);
+    if (!gate.allowed) {
+      setError(`محاولات كثيرة. حاول مرة أخرى بعد ${formatRetryAfter(gate.retryAfterMs)}.`);
+      return;
+    }
+
+    const validation = safeValidate(loginSchema, { email, password });
+    if (!validation.data) {
+      setError(validation.error ?? "بيانات غير صالحة");
+      return;
+    }
+
     setLoading(true);
-    const result = await signIn(email, password);
-    if (result.error) {
-      setError(result.error);
+    try {
+      const result = await signIn(validation.data.email, validation.data.password);
+      if (result.error) {
+        setError(friendlyErrorMessage(result.error));
+        setLoading(false);
+        return;
+      }
+      clearBucket("login");
+      if (result.role) {
+        navigate(routeByRole(result.role), { replace: true });
+      }
+    } catch (err) {
+      setError(friendlyErrorMessage(err));
       setLoading(false);
-    } else if (result.role) {
-      navigate(routeByRole(result.role), { replace: true });
     }
   };
 
@@ -82,24 +112,26 @@ export default function LoginPage() {
                     سجل دخولك بالبيانات التجريبية أدناه
                   </p>
 
-                  {/* Fake Credentials For Testing */}
-                  <div className="mt-3 md:mt-4 rounded-xl md:rounded-2xl border border-primary/30 bg-primary/10 p-3 md:p-4">
-                    <p className="text-xs md:text-sm font-semibold text-primary">بيانات تجريبية :</p>
-                    <div className="mt-2 grid gap-1.5 md:gap-2 text-[10px] md:text-xs text-foreground/80">
-                      <p>
-                        <span className="text-primary">أدمن :</span> admin@careflow.com / 12345678
-                      </p>
-                      <p>
-                        <span className="text-primary">طبيب :</span> doctor@careflow.com / 12345678
-                      </p>
-                      <p>
-                        <span className="text-primary">مريض :</span> patient@careflow.com / 12345678
-                      </p>
-                      <p>
-                        <span className="text-primary">موظف استقبال :</span> receptionist@careflow.com / 12345678
-                      </p>
+                  {/* Demo credentials (development builds only) */}
+                  {SHOW_DEMO_CREDENTIALS && (
+                    <div className="mt-3 md:mt-4 rounded-xl md:rounded-2xl border border-primary/30 bg-primary/10 p-3 md:p-4">
+                      <p className="text-xs md:text-sm font-semibold text-primary">بيانات تجريبية :</p>
+                      <div className="mt-2 grid gap-1.5 md:gap-2 text-[10px] md:text-xs text-foreground/80">
+                        <p>
+                          <span className="text-primary">أدمن :</span> admin@careflow.com / 12345678
+                        </p>
+                        <p>
+                          <span className="text-primary">طبيب :</span> doctor@careflow.com / 12345678
+                        </p>
+                        <p>
+                          <span className="text-primary">مريض :</span> patient@careflow.com / 12345678
+                        </p>
+                        <p>
+                          <span className="text-primary">موظف استقبال :</span> receptionist@careflow.com / 12345678
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="mt-3 md:mt-4 grid gap-2 md:gap-3 grid-cols-2">
                     {[
@@ -151,6 +183,8 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="example@careflow.com"
+                      autoComplete="email"
+                      maxLength={254}
                       required
                       className="h-10 md:h-11 w-full rounded-xl md:rounded-2xl border border-foreground/10 bg-foreground/5 px-3 md:px-4 text-sm text-foreground outline-none transition focus:border-primary/50 focus:bg-foreground/[0.07]"
                     />
@@ -163,6 +197,8 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
+                      autoComplete="current-password"
+                      maxLength={128}
                       required
                       className="h-10 md:h-11 w-full rounded-xl md:rounded-2xl border border-foreground/10 bg-foreground/5 px-3 md:px-4 text-sm text-foreground outline-none transition focus:border-primary/50 focus:bg-foreground/[0.07]"
                     />
