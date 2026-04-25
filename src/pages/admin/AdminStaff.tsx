@@ -147,54 +147,41 @@ export default function AdminStaff() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Staff role must be one of the two allowed values; never trust the
-    // form state alone in case the <select> is tampered with.
     if (form.role !== "admin" && form.role !== "receptionist") {
       toast.error("الدور غير صالح");
       return;
     }
 
-    const validation = safeValidate(adminCreateStaffSchema, {
-      fullName: form.fullName,
-      email: form.email,
-      password: form.password,
-      phone: "",
-    });
-    if (!validation.data) {
-      toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
-      return;
-    }
-    const clean = validation.data;
-
-    const fullName = form.fullName.trim();
-    const email = form.email.trim().toLowerCase();
-    const password = form.password.trim();
-
-    if (!fullName) {
-      toast.error("اكتب اسم الموظف");
-      return;
-    }
-
     if (modalMode === "create") {
-      if (!email) {
-        toast.error("اكتب البريد الإلكتروني");
+      const validation = safeValidate(adminCreateStaffSchema, {
+        fullName: form.fullName,
+        email: form.email,
+        password: form.password,
+        phone: "",
+      });
+      if (!validation.data) {
+        toast.error("بيانات غير صالحة", { description: validation.error ?? undefined });
         return;
       }
-
-      if (password.length < 6) {
-        toast.error("كلمة المرور يجب ألا تقل عن 6 أحرف");
-        return;
-      }
-
-      await handleCreate(fullName, email, password);
+      const clean = validation.data;
+      await handleCreate(clean.fullName, clean.email, clean.password);
       return;
     }
 
     if (!editingStaff) return;
 
+    const editValidation = safeValidate(
+      z.object({ name: fullNameSchema, role: roleSchema }),
+      { name: form.fullName, role: form.role },
+    );
+    if (!editValidation.data) {
+      toast.error("بيانات غير صالحة", { description: editValidation.error ?? undefined });
+      return;
+    }
+
     await updateStaff(editingStaff.id, {
-      name: fullName,
-      role: form.role,
+      name: editValidation.data.name,
+      role: editValidation.data.role,
     });
   };
 
@@ -207,9 +194,6 @@ export default function AdminStaff() {
 
     try {
       const { uid, error } = await createUserAsAdmin({
-        email: clean.email,
-        password: clean.password,
-        name: clean.fullName,
         email,
         password,
         name: fullName,
@@ -218,16 +202,12 @@ export default function AdminStaff() {
 
       if (error || !uid) {
         toast.error("فشل إنشاء الحساب", { description: friendlyErrorMessage(error) });
-        setCreating(false);
-        toast.error("فشل إنشاء الحساب", { description: error ?? undefined });
         return;
       }
 
       const { error: upsertErr } = await supabase.from("users").upsert(
         {
           id: uid,
-          name: clean.fullName,
-          email: clean.email,
           name: fullName,
           email,
           role: form.role,
@@ -252,37 +232,6 @@ export default function AdminStaff() {
     } finally {
       setCreating(false);
     }
-
-    setCreating(false);
-  };
-
-  const handleEditClick = (user: AppUser) => {
-    setEditingStaff(user);
-    setEditForm({
-      name: user.name ?? "",
-      role: user.role as StaffRole,
-    });
-    setEditModalOpen(true);
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!editingStaff) return;
-
-    const editValidation = safeValidate(
-      z.object({ name: fullNameSchema, role: roleSchema }),
-      editForm,
-    );
-    if (!editValidation.data) {
-      toast.error("بيانات غير صالحة", { description: editValidation.error ?? undefined });
-      return;
-    }
-
-    await updateStaff(editingStaff.id, {
-      name: editValidation.data.name,
-      role: editValidation.data.role,
-    });
   };
 
   const handleDeleteClick = (user: AppUser) => {

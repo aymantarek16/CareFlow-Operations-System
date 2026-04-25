@@ -66,8 +66,6 @@ export default function PatientProfile() {
     { icon: Phone, label: "الهاتف", value: patient?.phone },
     { icon: CalendarDays, label: "تاريخ الميلاد", value: patient?.date_of_birth },
     { icon: HeartPulse, label: "النوع", value: patient?.gender === "male" ? "ذكر" : patient?.gender === "female" ? "أنثى" : patient?.gender },
-    { icon: MapPin, label: "العنوان", value: patient?.address || "غير متوفر" },
-    { icon: FileText, label: "تاريخ طبي", value: patient?.medical_history || "غير متوفر" },
   ];
 
   return (
