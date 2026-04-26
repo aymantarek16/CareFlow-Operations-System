@@ -6,23 +6,31 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { usePatientOverview } from "@/hooks/useData";
 import { formatDate } from "@/lib/helpers";
 import { generatePdfReport } from "@/lib/pdf";
-import { Download, Printer } from "lucide-react";
+import {
+  formatMoney,
+  formatInvoiceStatus,
+  invoiceRemaining,
+  num,
+} from "@/lib/billing";
+import { Download, Printer, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { ViewInvoiceDialog } from "@/components/invoices/ViewInvoiceDialog";
 import type { InvoiceRecord } from "@/lib/types";
-
-const STATUS_LABEL: Record<string, string> = {
-  pending: "معلقة",
-  paid: "مدفوعة",
-  cancelled: "ملغية",
-  refunded: "مستردة",
-};
 
 export default function PatientInvoices() {
   const { myInvoices } = usePatientOverview();
   const [exporting, setExporting] = useState(false);
+  const [viewId, setViewId] = useState<string | null>(null);
 
-  const paidAmount = myInvoices.filter((i) => i.status === "paid").reduce((s, i) => s + Number(i.amount || 0), 0);
-  const pendingAmount = myInvoices.filter((i) => i.status === "pending").reduce((s, i) => s + Number(i.amount || 0), 0);
+  const totalAmount = myInvoices.reduce(
+    (s, i) => s + num(i.total_amount || i.amount),
+    0,
+  );
+  const paidAmount = myInvoices.reduce((s, i) => s + num(i.paid_amount), 0);
+  const remainingAmount = myInvoices.reduce(
+    (s, i) => s + invoiceRemaining(i),
+    0,
+  );
 
   const exportAll = async () => {
     setExporting(true);
@@ -33,17 +41,19 @@ export default function PatientInvoices() {
         filename: `my-invoices-${new Date().toISOString().slice(0, 10)}`,
         meta: [
           { label: "عدد الفواتير", value: myInvoices.length },
-          { label: "المدفوع", value: `${paidAmount.toFixed(2)} ج.م` },
-          { label: "المعلق", value: `${pendingAmount.toFixed(2)} ج.م` },
+          { label: "الإجمالي", value: formatMoney(totalAmount) },
+          { label: "المدفوع", value: formatMoney(paidAmount) },
+          { label: "المتبقي", value: formatMoney(remainingAmount) },
         ],
         table: {
-          columns: ["رقم", "المبلغ", "الحالة", "التاريخ", "ملاحظات"],
+          columns: ["رقم", "الإجمالي", "المدفوع", "المتبقي", "الحالة", "التاريخ"],
           rows: myInvoices.map((i) => [
             i.id.slice(0, 8),
-            `${Number(i.amount).toFixed(2)} ج.م`,
-            STATUS_LABEL[i.status ?? ""] ?? i.status ?? "-",
+            formatMoney(i.total_amount || i.amount),
+            formatMoney(i.paid_amount),
+            formatMoney(invoiceRemaining(i)),
+            formatInvoiceStatus(i.status),
             formatDate(i.issue_date),
-            i.notes ?? "-",
           ]),
         },
       });
@@ -63,8 +73,10 @@ export default function PatientInvoices() {
         filename: `invoice-${inv.id.slice(0, 8)}`,
         meta: [
           { label: "تاريخ الإصدار", value: formatDate(inv.issue_date) },
-          { label: "الحالة", value: STATUS_LABEL[inv.status ?? ""] ?? inv.status ?? "-" },
-          { label: "المبلغ الإجمالي", value: `${Number(inv.amount).toFixed(2)} ج.م` },
+          { label: "الحالة", value: formatInvoiceStatus(inv.status) },
+          { label: "الإجمالي", value: formatMoney(inv.total_amount || inv.amount) },
+          { label: "المدفوع", value: formatMoney(inv.paid_amount) },
+          { label: "المتبقي", value: formatMoney(invoiceRemaining(inv)) },
         ],
         sections: inv.notes ? [{ heading: "ملاحظات", body: inv.notes }] : undefined,
         footer: "شكراً لاختياركم خدماتنا",
@@ -77,9 +89,38 @@ export default function PatientInvoices() {
 
   return (
     <div>
-      <PageHeader eyebrow="Patient / Invoices" title="المدفوعات" />
+      <PageHeader eyebrow="Patient / Invoices" title="فواتيري والمدفوعات" />
+
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-4">
+          <p className="text-xs text-foreground/50">عدد الفواتير</p>
+          <p className="text-2xl font-bold text-foreground">
+            {myInvoices.length}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-4">
+          <p className="text-xs text-foreground/50">الإجمالي</p>
+          <p className="text-2xl font-bold text-foreground">
+            {formatMoney(totalAmount)}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-4">
+          <p className="text-xs text-foreground/50">المدفوع</p>
+          <p className="text-2xl font-bold text-emerald-400">
+            {formatMoney(paidAmount)}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-4">
+          <p className="text-xs text-foreground/50">المتبقي</p>
+          <p className="text-2xl font-bold text-amber-400">
+            {formatMoney(remainingAmount)}
+          </p>
+        </div>
+      </div>
+
       <GlassCard
         title="الفواتير"
+        subtitle="عرض الفواتير الخاصة بك (للقراءة فقط)"
         action={
           <button
             type="button"
@@ -93,27 +134,63 @@ export default function PatientInvoices() {
         }
       >
         <DataTable
-          columns={["رقم", "المبلغ", "الحالة", "التاريخ", "ملاحظات", "إجراءات"]}
-          rows={myInvoices.map((i) => [
-            i.id.slice(0, 8),
-            `${i.amount} ج.م`,
-            <StatusBadge key={i.id} status={i.status} />,
-            formatDate(i.issue_date),
-            i.notes ?? "-",
-            <button
-              key={i.id}
-              type="button"
-              onClick={() => printOne(i)}
-              className="flex items-center gap-1 rounded-lg bg-foreground/5 px-2 py-1 text-xs text-foreground/80 hover:bg-foreground/10"
-              title="طباعة الفاتورة"
-            >
-              <Printer className="h-3.5 w-3.5" />
-              طباعة
-            </button>,
-          ])}
+          columns={[
+            "رقم",
+            "الإجمالي",
+            "المدفوع",
+            "المتبقي",
+            "الحالة",
+            "التاريخ",
+            "إجراءات",
+          ]}
+          rows={myInvoices.map((i) => {
+            const remaining = invoiceRemaining(i);
+            return [
+              i.id.slice(0, 8),
+              formatMoney(i.total_amount || i.amount),
+              formatMoney(i.paid_amount),
+              <span
+                key={`r-${i.id}`}
+                className={
+                  remaining > 0
+                    ? "font-semibold text-amber-300"
+                    : "text-foreground/50"
+                }
+              >
+                {formatMoney(remaining)}
+              </span>,
+              <StatusBadge key={`s-${i.id}`} status={i.status} />,
+              formatDate(i.issue_date),
+              <div key={`a-${i.id}`} className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setViewId(i.id)}
+                  title="عرض التفاصيل"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground/5 text-foreground/70 hover:bg-foreground/10"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => printOne(i)}
+                  title="طباعة الفاتورة"
+                  className="flex h-8 items-center gap-1 rounded-lg bg-foreground/5 px-2 text-xs text-foreground/80 hover:bg-foreground/10"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  طباعة
+                </button>
+              </div>,
+            ];
+          })}
           emptyMessage="لا توجد فواتير حالياً."
         />
       </GlassCard>
+
+      <ViewInvoiceDialog
+        open={!!viewId}
+        invoiceId={viewId}
+        onOpenChange={(o) => !o && setViewId(null)}
+      />
     </div>
   );
 }

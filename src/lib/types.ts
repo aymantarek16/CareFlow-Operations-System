@@ -53,13 +53,55 @@ export type MedicalRecord = {
   created_at?: string;
 };
 
+export type InvoiceStatus =
+  | "pending"
+  | "partially_paid"
+  | "paid"
+  | "cancelled"
+  | "refunded";
+
+export type PaymentMethod =
+  | "cash"
+  | "card"
+  | "vodafone_cash"
+  | "instapay"
+  | "other";
+
 export type InvoiceRecord = {
   id: string;
   patient_id: string;
+  doctor_id: string | null;
+  appointment_id: string | null;
   amount: number | string;
-  status: string | null;
+  subtotal: number | string;
+  discount: number | string;
+  tax: number | string;
+  total_amount: number | string;
+  paid_amount: number | string;
+  status: InvoiceStatus | string | null;
   issue_date: string | null;
   notes: string | null;
+  created_at?: string;
+};
+
+export type InvoiceItem = {
+  id: string;
+  invoice_id: string;
+  service_name: string;
+  quantity: number;
+  unit_price: number | string;
+  total: number | string;
+  created_at?: string;
+};
+
+export type PaymentRecord = {
+  id: string;
+  invoice_id: string;
+  patient_id: string;
+  amount: number | string;
+  method: PaymentMethod | string;
+  notes: string | null;
+  created_by: string | null;
   created_at?: string;
 };
 

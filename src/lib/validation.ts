@@ -139,8 +139,13 @@ export const appointmentStatusSchema = z.enum(
 );
 
 export const invoiceStatusSchema = z.enum(
-  ["pending", "paid", "cancelled", "refunded"],
+  ["pending", "partially_paid", "paid", "cancelled", "refunded"],
   { errorMap: () => ({ message: "حالة فاتورة غير صالحة" }) },
+);
+
+export const paymentMethodSchema = z.enum(
+  ["cash", "card", "vodafone_cash", "instapay", "other"],
+  { errorMap: () => ({ message: "طريقة دفع غير صالحة" }) },
 );
 
 export const invoiceAmountSchema = z
@@ -152,6 +157,31 @@ export const invoiceAmountSchema = z
   })
   .refine((v) => Number.isFinite(v) && v >= 0, { message: "المبلغ غير صالح" })
   .refine((v) => v <= 10_000_000, { message: "المبلغ خارج النطاق المسموح" });
+
+export const positiveAmountSchema = invoiceAmountSchema.refine((v) => v > 0, {
+  message: "أدخل مبلغاً أكبر من صفر",
+});
+
+export const invoiceItemSchema = z.object({
+  service_name: shortTextSchema(120, "اسم الخدمة"),
+  quantity: z
+    .union([z.number(), z.string()])
+    .transform((v) => Math.floor(Number(v) || 0))
+    .refine((v) => v > 0 && v <= 1000, { message: "الكمية غير صالحة" }),
+  unit_price: invoiceAmountSchema,
+});
+
+export const invoiceItemsArraySchema = z
+  .array(invoiceItemSchema)
+  .min(1, "أضف خدمة واحدة على الأقل")
+  .max(50, "عدد الخدمات كبير جداً");
+
+export const createPaymentSchema = z.object({
+  invoice_id: z.string().uuid("فاتورة غير صالحة"),
+  amount: positiveAmountSchema,
+  method: paymentMethodSchema,
+  notes: optionalMultilineSchema(500),
+});
 
 // ─── Composite schemas ────────────────────────────────────────────────
 
