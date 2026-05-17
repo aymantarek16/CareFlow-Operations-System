@@ -6,7 +6,10 @@
     }
   ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api/.*).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
