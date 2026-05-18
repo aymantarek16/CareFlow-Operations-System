@@ -6,16 +6,6 @@
  * into a jsPDF document. No font loading required.
  */
 
-// html2pdf is an ES module that expects a browser `window` object. The package
-// ships without type declarations so we import it untyped and wrap the calls
-// behind a typed API.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-import html2pdfImport from "html2pdf.js";
-
-// html2pdf.js default export is a callable factory.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const html2pdf: any = html2pdfImport;
-
 import { supabase } from "@/lib/supabase";
 
 export type ClinicHeader = {
@@ -42,8 +32,28 @@ export type PdfReport = {
   footer?: string;
 };
 
+type Html2PdfWorker = {
+  from: (element: HTMLElement) => {
+    set: (options: Record<string, unknown>) => {
+      save: () => Promise<void>;
+    };
+  };
+};
+
+type Html2PdfFactory = () => Html2PdfWorker;
+
 /** In-memory cache so we don't re-query settings for every PDF in the same page load. */
 let cachedHeader: ClinicHeader | null = null;
+let html2pdfFactory: Html2PdfFactory | null = null;
+
+async function getHtml2Pdf(): Promise<Html2PdfFactory> {
+  if (!html2pdfFactory) {
+    const module = (await import("html2pdf.js")) as { default: Html2PdfFactory };
+    html2pdfFactory = module.default;
+  }
+
+  return html2pdfFactory;
+}
 
 export async function loadClinicHeader(): Promise<ClinicHeader> {
   if (cachedHeader) return cachedHeader;
@@ -283,6 +293,7 @@ function buildHtml(report: PdfReport, header: ClinicHeader): string {
  */
 export async function generatePdfReport(report: PdfReport): Promise<void> {
   const header = await loadClinicHeader();
+  const html2pdf = await getHtml2Pdf();
   const html = buildHtml(report, header);
 
   // html2pdf needs an element actually mounted in the DOM.

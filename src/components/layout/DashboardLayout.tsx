@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { AppSidebar } from "@/components/layout/AppSidebar";
+import { AppSidebar, MobileSidebar } from "@/components/layout/AppSidebar";
 
 export function DashboardLayout() {
   const { appUser } = useAuth();
@@ -9,7 +9,10 @@ export function DashboardLayout() {
 
   return (
     <main className="min-h-screen px-4 py-5 lg:px-6">
-      <div className="mx-auto grid max-w-[1880px] gap-6 lg:grid-cols-[320px,1fr]">
+      <div className="mx-auto max-w-[1880px]">
+        <MobileSidebar user={appUser} />
+      </div>
+      <div className="mx-auto grid max-w-[1880px] gap-6 xl:grid-cols-[320px,1fr]">
         <AppSidebar user={appUser} />
         <div className="min-w-0">
           <Outlet />

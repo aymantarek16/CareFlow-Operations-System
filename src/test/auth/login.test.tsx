@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PublicRoute } from "@/components/auth/ProtectedRoute";
 import LoginPage from "@/pages/Login";
+import type { AppRole } from "@/lib/types";
 import {
   resetAllMocks,
   mockSignInWithPassword,
@@ -74,7 +75,7 @@ describe("Login Page", () => {
     fireEvent.click(screen.getByRole("button", { name: /تسجيل الدخول/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("Invalid login credentials")).toBeInTheDocument();
+      expect(screen.getByText("البريد الإلكتروني أو كلمة المرور غير صحيحة.")).toBeInTheDocument();
     });
   });
 
@@ -99,7 +100,7 @@ describe("Login Page", () => {
     ["patient", "/patient/dashboard"],
     ["receptionist", "/receptionist/dashboard"],
   ] as const)("redirects %s to %s after successful login", async (role, _path) => {
-    const fakeUser = buildFakeUser({ id: `${role}-uuid`, email: `${role}@careflow.com`, role: role as any });
+    const fakeUser = buildFakeUser({ id: `${role}-uuid`, email: `${role}@careflow.com`, role: role as AppRole });
     const fakeSession = buildFakeSession(fakeUser);
 
     mockSignInWithPassword.mockResolvedValueOnce({ data: { user: fakeUser, session: fakeSession }, error: null });

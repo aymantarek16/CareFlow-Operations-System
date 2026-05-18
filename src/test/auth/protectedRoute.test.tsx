@@ -10,6 +10,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute, PublicRoute } from "@/components/auth/ProtectedRoute";
+import type { AppRole } from "@/lib/types";
 import {
   resetAllMocks,
   mockGetSession,
@@ -158,7 +159,7 @@ describe("PublicRoute", () => {
     ["patient", "/patient/dashboard"],
     ["receptionist", "/receptionist/dashboard"],
   ] as const)("redirects authenticated %s to %s", async (role, path) => {
-    const user = buildFakeUser({ role: role as any });
+    const user = buildFakeUser({ role: role as AppRole });
     const session = buildFakeSession(user);
     mockGetSession.mockResolvedValue({ data: { session }, error: null });
 

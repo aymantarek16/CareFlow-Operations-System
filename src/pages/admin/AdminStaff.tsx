@@ -595,9 +595,9 @@ export default function AdminStaff() {
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}
         title="حذف الموظف"
-        description={`هل أنت متأكد من حذف \"${
+        description={`هل أنت متأكد من حذف "${
           deletingStaff?.name ?? deletingStaff?.email ?? ""
-        }\"؟ سيفقد صلاحياته من النظام فوراً.`}
+        }"؟ سيفقد صلاحياته من النظام فوراً.`}
         confirmText="حذف"
         loading={deleteLoading}
         variant="danger"

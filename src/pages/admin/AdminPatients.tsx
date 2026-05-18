@@ -520,7 +520,7 @@ export default function AdminPatients() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         title="تأكيد حذف المريض"
-        description={`هل أنت متأكد من حذف المريض \"${deletingPatient?.first_name ?? ""} ${deletingPatient?.last_name ?? ""}\"؟ لا يمكن التراجع عن هذا الإجراء.`}
+        description={`هل أنت متأكد من حذف المريض "${deletingPatient?.first_name ?? ""} ${deletingPatient?.last_name ?? ""}"؟ لا يمكن التراجع عن هذا الإجراء.`}
         confirmText="حذف نهائي"
         cancelText="إلغاء"
         onConfirm={handleDeleteConfirm}

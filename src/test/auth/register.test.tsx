@@ -41,7 +41,7 @@ function renderRegister() {
 function fillForm() {
   fireEvent.change(screen.getByPlaceholderText("الاسم بالكامل"), { target: { value: "أحمد محمد" } });
   fireEvent.change(screen.getByPlaceholderText("البريد الإلكتروني"), { target: { value: "ahmed@test.com" } });
-  fireEvent.change(screen.getByPlaceholderText("كلمة المرور"), { target: { value: "password123" } });
+  fireEvent.change(screen.getByPlaceholderText(/كلمة المرور/), { target: { value: "password123" } });
   fireEvent.change(screen.getByPlaceholderText("الهاتف"), { target: { value: "0501234567" } });
   // Fill the required date input
   const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement;
@@ -57,7 +57,7 @@ describe("Register Page", () => {
     renderRegister();
     expect(screen.getByPlaceholderText("الاسم بالكامل")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("البريد الإلكتروني")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("كلمة المرور")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/كلمة المرور/)).toBeInTheDocument();
     expect(screen.getByPlaceholderText("الهاتف")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /إنشاء حساب/i })).toBeInTheDocument();
   });
@@ -73,7 +73,7 @@ describe("Register Page", () => {
     fireEvent.click(screen.getByRole("button", { name: /إنشاء حساب/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("User already registered")).toBeInTheDocument();
+      expect(screen.getByText("هذه البيانات مستخدمة بالفعل.")).toBeInTheDocument();
     });
   });
 
@@ -86,13 +86,13 @@ describe("Register Page", () => {
     });
 
     // Track inserts — users table then patients table
-    const insertCalls: { table: string; data: any }[] = [];
+    const insertCalls: { table: string; data: unknown }[] = [];
     mockFrom.mockImplementation((table: string) => {
-      const builder: any = {
+      const builder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: null, error: { message: "not found" } }),
-        insert: vi.fn().mockImplementation((data: any) => {
+        insert: vi.fn().mockImplementation((data: unknown) => {
           insertCalls.push({ table, data });
           return Promise.resolve({ data: null, error: null });
         }),
@@ -162,7 +162,7 @@ describe("Register Page", () => {
     fireEvent.click(screen.getByRole("button", { name: /إنشاء حساب/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("RLS policy violation")).toBeInTheDocument();
+      expect(screen.getByText("ليست لديك الصلاحية للقيام بهذه العملية.")).toBeInTheDocument();
     });
   });
 });
