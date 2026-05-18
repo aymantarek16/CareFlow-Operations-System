@@ -6,7 +6,6 @@ import { loginSchema, safeValidate } from "@/lib/validation";
 import { friendlyErrorMessage } from "@/lib/sanitize";
 import { tryAction, clearBucket, formatRetryAfter } from "@/lib/rateLimit";
 import {
-  Sparkles,
   Building2,
   ShieldCheck,
   Stethoscope,
@@ -97,7 +96,7 @@ export default function LoginPage() {
                 <div className="absolute inset-x-0 top-0 h-24 md:h-32 bg-gradient-to-r from-emerald-400/20 via-cyan-400/10 to-transparent blur-3xl" />
                 <div className="relative">
                   <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 md:px-4 md:py-2 text-xs font-semibold uppercase tracking-[0.25em] md:tracking-[0.35em] text-primary">
-                    <Sparkles size={12} className="md:w-[14px] md:h-[14px]" />
+                    <HeartPulse size={12} className="md:w-[14px] md:h-[14px]" />
                     CareFlow Prime
                   </div>
 
