@@ -30,9 +30,49 @@ as $$
   select role from public.users where id = (select auth.uid());
 $$;
 
+create or replace function public.is_patient_profile(p_patient_id uuid)
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select exists(
+    select 1
+    from public.patients p
+    where p.id = p_patient_id
+      and p.user_id = (select auth.uid())
+  );
+$$;
+
+create or replace function public.is_doctor_profile(p_doctor_id uuid)
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select exists(
+    select 1
+    from public.doctors d
+    where d.id = p_doctor_id
+      and d.user_id = (select auth.uid())
+  );
+$$;
+
+create or replace function public.doctor_can_access_patient(p_patient_id uuid)
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select exists(
+    select 1
+    from public.appointments a
+    join public.doctors d on d.id = a.doctor_id
+    where a.patient_id = p_patient_id
+      and d.user_id = (select auth.uid())
+  );
+$$;
+
 -- صلاحيات التنفيذ
 grant execute on function public.is_admin()     to authenticated;
 grant execute on function public.current_role() to authenticated;
+grant execute on function public.is_patient_profile(uuid)       to authenticated;
+grant execute on function public.is_doctor_profile(uuid)        to authenticated;
+grant execute on function public.doctor_can_access_patient(uuid) to authenticated;
 
 
 -- ===================================================
@@ -75,8 +115,7 @@ end $$;
 -- ===================================================
 -- 4) Policies — users
 -- ===================================================
--- قراءة: المستخدم يشوف نفسه، Admin يشوف الكل،
---        الدكتور والـ receptionist يشوفوا كل المستخدمين علشان القوائم
+-- قراءة: المستخدم يشوف نفسه، Admin يشوف الكل
 create policy users_select on public.users
   for select to authenticated
   using (
@@ -132,20 +171,15 @@ create policy doctors_delete on public.doctors
 -- ===================================================
 -- 6) Policies — patients
 -- ===================================================
--- قراءة: المريض يشوف نفسه، Admin/Doctor/Receptionist يشوفوا الكل
+-- قراءة: المريض يشوف نفسه، Admin/Receptionist يشوفوا الكل،
+--        والدكتور يشوف المرضى المرتبطين بمواعيده فقط.
 create policy patients_select on public.patients
   for select to authenticated
   using (
     user_id = (select auth.uid())
     or (select public.is_admin())
     or (select public.current_role()) = 'receptionist'
-    or exists (
-      select 1
-      from public.appointments a
-      join public.doctors d on d.id = a.doctor_id
-      where a.patient_id = patients.id
-        and d.user_id = (select auth.uid())
-    )
+    or (select public.doctor_can_access_patient(patients.id))
   );
 
 -- إنشاء: المريض ينشئ نفسه (Register.tsx)،
@@ -188,14 +222,8 @@ create policy appointments_select on public.appointments
   using (
     (select public.is_admin())
     or (select public.current_role()) = 'receptionist'
-    or exists (
-      select 1 from public.patients p
-      where p.id = appointments.patient_id and p.user_id = (select auth.uid())
-    )
-    or exists (
-      select 1 from public.doctors d
-      where d.id = appointments.doctor_id and d.user_id = (select auth.uid())
-    )
+    or (select public.is_patient_profile(appointments.patient_id))
+    or (select public.is_doctor_profile(appointments.doctor_id))
   );
 
 -- إنشاء: المريض لنفسه، Admin/Receptionist لأي مريض
@@ -204,31 +232,21 @@ create policy appointments_insert on public.appointments
   with check (
     (select public.is_admin())
     or (select public.current_role()) = 'receptionist'
-    or exists (
-      select 1 from public.patients p
-      where p.id = appointments.patient_id and p.user_id = (select auth.uid())
-    )
+    or (select public.is_patient_profile(appointments.patient_id))
   );
 
--- تعديل: المريض (إلغاء)، الدكتور (تغيير الحالة)،
---        Admin/Receptionist (check-in, reschedule)
+-- تعديل: الدكتور يحدّث مواعيده، Admin/Receptionist يديروا المواعيد.
 create policy appointments_update on public.appointments
   for update to authenticated
   using (
     (select public.is_admin())
     or (select public.current_role()) = 'receptionist'
-    or exists (
-      select 1 from public.doctors d
-      where d.id = appointments.doctor_id and d.user_id = (select auth.uid())
-    )
+    or (select public.is_doctor_profile(appointments.doctor_id))
   )
   with check (
     (select public.is_admin())
     or (select public.current_role()) = 'receptionist'
-    or exists (
-      select 1 from public.doctors d
-      where d.id = appointments.doctor_id and d.user_id = (select auth.uid())
-    )
+    or (select public.is_doctor_profile(appointments.doctor_id))
   );
 
 -- حذف: Admin/Receptionist فقط
@@ -245,14 +263,8 @@ create policy medical_records_select on public.medical_records
   for select to authenticated
   using (
     (select public.is_admin())
-    or exists (
-      select 1 from public.patients p
-      where p.id = medical_records.patient_id and p.user_id = (select auth.uid())
-    )
-    or exists (
-      select 1 from public.doctors d
-      where d.id = medical_records.doctor_id and d.user_id = (select auth.uid())
-    )
+    or (select public.is_patient_profile(medical_records.patient_id))
+    or (select public.is_doctor_profile(medical_records.doctor_id))
   );
 
 -- إنشاء: الدكتور فقط (لمرضاه) أو Admin
@@ -260,13 +272,9 @@ create policy medical_records_insert on public.medical_records
   for insert to authenticated
   with check (
     (select public.is_admin())
-    or exists (
-      select 1
-      from public.doctors d
-      join public.appointments a on a.doctor_id = d.id
-      where d.id = medical_records.doctor_id
-        and d.user_id = (select auth.uid())
-        and a.patient_id = medical_records.patient_id
+    or (
+      (select public.is_doctor_profile(medical_records.doctor_id))
+      and (select public.doctor_can_access_patient(medical_records.patient_id))
     )
   );
 
@@ -275,17 +283,11 @@ create policy medical_records_update on public.medical_records
   for update to authenticated
   using (
     (select public.is_admin())
-    or exists (
-      select 1 from public.doctors d
-      where d.id = medical_records.doctor_id and d.user_id = (select auth.uid())
-    )
+    or (select public.is_doctor_profile(medical_records.doctor_id))
   )
   with check (
     (select public.is_admin())
-    or exists (
-      select 1 from public.doctors d
-      where d.id = medical_records.doctor_id and d.user_id = (select auth.uid())
-    )
+    or (select public.is_doctor_profile(medical_records.doctor_id))
   );
 
 -- حذف: Admin فقط
@@ -301,27 +303,17 @@ create policy prescriptions_select on public.prescriptions
   for select to authenticated
   using (
     (select public.is_admin())
-    or exists (
-      select 1 from public.patients p
-      where p.id = prescriptions.patient_id and p.user_id = (select auth.uid())
-    )
-    or exists (
-      select 1 from public.doctors d
-      where d.id = prescriptions.doctor_id and d.user_id = (select auth.uid())
-    )
+    or (select public.is_patient_profile(prescriptions.patient_id))
+    or (select public.is_doctor_profile(prescriptions.doctor_id))
   );
 
 create policy prescriptions_insert on public.prescriptions
   for insert to authenticated
   with check (
     (select public.is_admin())
-    or exists (
-      select 1
-      from public.doctors d
-      join public.appointments a on a.doctor_id = d.id
-      where d.id = prescriptions.doctor_id
-        and d.user_id = (select auth.uid())
-        and a.patient_id = prescriptions.patient_id
+    or (
+      (select public.is_doctor_profile(prescriptions.doctor_id))
+      and (select public.doctor_can_access_patient(prescriptions.patient_id))
     )
   );
 
@@ -329,17 +321,11 @@ create policy prescriptions_update on public.prescriptions
   for update to authenticated
   using (
     (select public.is_admin())
-    or exists (
-      select 1 from public.doctors d
-      where d.id = prescriptions.doctor_id and d.user_id = (select auth.uid())
-    )
+    or (select public.is_doctor_profile(prescriptions.doctor_id))
   )
   with check (
     (select public.is_admin())
-    or exists (
-      select 1 from public.doctors d
-      where d.id = prescriptions.doctor_id and d.user_id = (select auth.uid())
-    )
+    or (select public.is_doctor_profile(prescriptions.doctor_id))
   );
 
 create policy prescriptions_delete on public.prescriptions
@@ -356,10 +342,7 @@ create policy invoices_select on public.invoices
   using (
     (select public.is_admin())
     or (select public.current_role()) = 'receptionist'
-    or exists (
-      select 1 from public.patients p
-      where p.id = invoices.patient_id and p.user_id = (select auth.uid())
-    )
+    or (select public.is_patient_profile(invoices.patient_id))
   );
 
 -- إنشاء/تعديل: Admin/Receptionist فقط

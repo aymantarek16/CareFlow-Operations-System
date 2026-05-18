@@ -20,28 +20,48 @@ create index if not exists idx_invoices_appointment on public.invoices(appointme
 create index if not exists idx_invoices_doctor      on public.invoices(doctor_id);
 create index if not exists idx_invoices_issue_date  on public.invoices(issue_date desc);
 
+create or replace function public.can_access_invoice(p_invoice_id uuid)
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.invoices inv
+    where inv.id = p_invoice_id
+      and (
+        (select public.is_admin())
+        or (select public.current_role()) = 'receptionist'
+        or (select public.is_patient_profile(inv.patient_id))
+      )
+  );
+$$;
+
+create or replace function public.can_manage_invoice(p_invoice_id uuid, p_patient_id uuid)
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.invoices inv
+    where inv.id = p_invoice_id
+      and inv.patient_id = p_patient_id
+      and inv.status not in ('cancelled','refunded')
+      and (
+        (select public.is_admin())
+        or (select public.current_role()) = 'receptionist'
+      )
+  );
+$$;
+
+grant execute on function public.can_access_invoice(uuid) to authenticated;
+grant execute on function public.can_manage_invoice(uuid, uuid) to authenticated;
+
 -- Tighten invoice visibility after doctor_id/appointment_id exist.
 drop policy if exists invoices_select on public.invoices;
 create policy invoices_select on public.invoices
   for select to authenticated
   using (
-    (select public.is_admin())
-    or (select public.current_role()) = 'receptionist'
-    or exists (
-      select 1 from public.patients p
-      where p.id = invoices.patient_id and p.user_id = (select auth.uid())
-    )
-    or exists (
-      select 1 from public.doctors d
-      where d.id = invoices.doctor_id and d.user_id = (select auth.uid())
-    )
-    or exists (
-      select 1
-      from public.appointments a
-      join public.doctors d on d.id = a.doctor_id
-      where a.id = invoices.appointment_id
-        and d.user_id = (select auth.uid())
-    )
+    (select public.can_access_invoice(invoices.id))
   );
 
 create or replace function public.tg_validate_invoice_links()
@@ -150,18 +170,7 @@ drop policy if exists invoice_items_delete on public.invoice_items;
 create policy invoice_items_select on public.invoice_items
   for select to authenticated
   using (
-    (select public.is_admin())
-    or (select public.current_role()) = 'receptionist'
-    or exists (
-      select 1 from public.invoices inv
-      join public.patients p on p.id = inv.patient_id
-      where inv.id = invoice_items.invoice_id and p.user_id = (select auth.uid())
-    )
-    or exists (
-      select 1 from public.invoices inv
-      join public.doctors d on d.id = inv.doctor_id
-      where inv.id = invoice_items.invoice_id and d.user_id = (select auth.uid())
-    )
+    (select public.can_access_invoice(invoice_items.invoice_id))
   );
 
 create policy invoice_items_insert on public.invoice_items
@@ -190,22 +199,13 @@ create policy payments_select on public.payments
   using (
     (select public.is_admin())
     or (select public.current_role()) = 'receptionist'
-    or exists (
-      select 1 from public.patients p
-      where p.id = payments.patient_id and p.user_id = (select auth.uid())
-    )
+    or (select public.is_patient_profile(payments.patient_id))
   );
 
 create policy payments_insert on public.payments
   for insert to authenticated
   with check (
-    ((select public.is_admin()) or (select public.current_role()) = 'receptionist')
-    and exists (
-      select 1 from public.invoices inv
-      where inv.id = payments.invoice_id
-        and inv.patient_id = payments.patient_id
-        and inv.status not in ('cancelled','refunded')
-    )
+    (select public.can_manage_invoice(payments.invoice_id, payments.patient_id))
   );
 
 -- المدفوعات لا تُعدّل ولا تُحذف من العميل (audit-safe).

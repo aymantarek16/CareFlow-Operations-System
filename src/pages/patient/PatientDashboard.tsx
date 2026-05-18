@@ -6,14 +6,36 @@ import { SkeletonTable, SkeletonStatCard } from "@/components/ui/SkeletonTable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { usePatientOverview } from "@/hooks/useData";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatDate, formatTime } from "@/lib/helpers";
-import { CalendarDays, Stethoscope, FileText, CreditCard } from "lucide-react";
+import { CalendarDays, Stethoscope, FileText, CreditCard, AlertTriangle } from "lucide-react";
 
 export default function PatientDashboard() {
-  const { patient, myAppointments, myDoctors, metrics } = usePatientOverview();
+  const { appUser } = useAuth();
+  const { loading, profileMissing, patient, myAppointments, myDoctors, metrics } = usePatientOverview();
   const dm = new Map(myDoctors.map((d) => [d.id, `${d.first_name??""} ${d.last_name??""}`.trim()||d.id]));
 
-  const isLoading = !patient && !myAppointments.length;
+  const isLoading = loading;
+
+  if (profileMissing) {
+    return (
+      <div>
+        <PageHeader
+          eyebrow="Patient Portal"
+          title={`أهلًا ${appUser?.name ?? ""}`}
+          description="ملخص حسابك مع المواعيد والسجلات."
+        />
+        <div className="mt-6 flex flex-col items-center gap-3 rounded-[24px] border border-amber-400/30 bg-amber-400/5 p-8 text-center">
+          <AlertTriangle className="h-8 w-8 text-amber-300" />
+          <p className="text-lg font-semibold text-foreground">ملف المريض غير مربوط</p>
+          <p className="max-w-xl text-sm leading-7 text-foreground/60">
+            تم تسجيل الدخول بنجاح، لكن لم نجد سجل مريض مرتبط بهذا الحساب.
+            تأكد من وجود صف في جدول patients قيمة user_id فيه تساوي معرف المستخدم.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
