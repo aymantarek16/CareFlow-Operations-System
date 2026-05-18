@@ -65,11 +65,14 @@ describe("ProtectedRoute", () => {
     const session = buildFakeSession(doctorUser);
     mockGetSession.mockResolvedValue({ data: { session }, error: null });
 
-    // DB fetch falls back to metadata
+    // DB profile is the trusted source for authorization.
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: { message: "rls" } }),
+      single: vi.fn().mockResolvedValue({
+        data: { id: doctorUser.id, name: "Doctor", email: doctorUser.email, role: "doctor" },
+        error: null,
+      }),
     });
 
     renderWithRoutes(

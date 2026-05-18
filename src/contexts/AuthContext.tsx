@@ -15,25 +15,11 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-/** Known demo account roles */
-const DEMO_ROLES: Record<string, AppRole> = {
-  "admin@careflow.com": "admin",
-  "doctor@careflow.com": "doctor",
-  "patient@careflow.com": "patient",
-  "receptionist@careflow.com": "receptionist",
-};
-
-/** Determine role from all available sources */
+/** Determine role from trusted database state only. */
 function resolveRole(user: User): AppRole {
-  // 1. Check user_metadata
-  const metaRole = user.user_metadata?.role;
-  if (metaRole && ["admin", "doctor", "patient", "receptionist"].includes(metaRole)) {
-    return metaRole as AppRole;
-  }
-  // 2. Check demo accounts
-  const email = user.email?.toLowerCase() ?? "";
-  if (DEMO_ROLES[email]) return DEMO_ROLES[email];
-  // 3. Default
+  // User metadata is controlled by the signed-in user, so it is never used
+  // for authorization. If the DB profile cannot be read, fail closed.
+  void user;
   return "patient";
 }
 

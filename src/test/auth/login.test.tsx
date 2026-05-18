@@ -108,7 +108,15 @@ describe("Login Page", () => {
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: { message: "rls" } }),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: fakeUser.id,
+          name: "Test User",
+          email: fakeUser.email,
+          role,
+        },
+        error: null,
+      }),
     });
 
     renderLogin();
