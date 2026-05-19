@@ -9,7 +9,7 @@ lerna-debug.log*
 
 Private
 CareFlow Operations System.zip
-Supbase
+Supabase
 node_modules
 .env
 .env.local
