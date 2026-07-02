@@ -8,7 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 Private
-CareFlow_Operations_System.zip
+CareFlow Operations System.zip
 Supabase
 node_modules
 .env
