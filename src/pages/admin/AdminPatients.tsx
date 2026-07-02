@@ -117,7 +117,7 @@ export default function AdminPatients() {
     setCreating(true);
 
     try {
-      const { uid, error } = await createUserAsAdmin({
+      const { uid, error, profileSynced } = await createUserAsAdmin({
         email: clean.email,
         password: clean.password,
         name: clean.fullName,
@@ -131,6 +131,8 @@ export default function AdminPatients() {
 
       const names = splitName(clean.fullName);
 
+      if (!profileSynced) {
+
       const { error: userError } = await supabase
         .from("users")
         .upsert(
@@ -141,6 +143,8 @@ export default function AdminPatients() {
       if (userError) {
         toast.error("فشل حفظ بيانات المستخدم", { description: friendlyErrorMessage(userError.message) });
         return;
+      }
+
       }
 
       const { error: patientError } = await supabase.from("patients").insert({

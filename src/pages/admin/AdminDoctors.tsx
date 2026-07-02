@@ -142,7 +142,7 @@ export default function AdminDoctors() {
     setCreating(true);
 
     try {
-      const { uid, error } = await createUserAsAdmin({
+      const { uid, error, profileSynced } = await createUserAsAdmin({
         email: clean.email,
         password: clean.password,
         name: clean.fullName,
@@ -156,6 +156,8 @@ export default function AdminDoctors() {
 
       const names = splitName(clean.fullName);
 
+      if (!profileSynced) {
+
       const { error: userError } = await supabase
         .from("users")
         .upsert(
@@ -166,6 +168,8 @@ export default function AdminDoctors() {
       if (userError) {
         toast.error("فشل حفظ بيانات المستخدم", { description: friendlyErrorMessage(userError.message) });
         return;
+      }
+
       }
 
       const { error: doctorError } = await supabase.from("doctors").insert({

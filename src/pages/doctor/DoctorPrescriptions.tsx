@@ -10,6 +10,8 @@ import { usePrescriptions, usePatients, useDoctors } from "@/hooks/useData";
 import { useDeleteMutation, useUpdateMutation, useInsertMutation } from "@/hooks/useMutation";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDateTime } from "@/lib/helpers";
+import { friendlyErrorMessage } from "@/lib/sanitize";
+import { supabase } from "@/lib/supabase";
 import type { Prescription } from "@/lib/types";
 import { Pencil, Trash2, Plus, Search, Pill, Syringe, X } from "lucide-react";
 import { toast } from "sonner";
@@ -66,6 +68,7 @@ export default function DoctorPrescriptions() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingPrescription, setDeletingPrescription] = useState<Prescription | null>(null);
+  const [secureDeleteLoading, setSecureDeleteLoading] = useState(false);
 
   const doctor = useMemo(() => doctors.find((d) => d.user_id === appUser?.id), [doctors, appUser?.id]);
 
@@ -123,6 +126,9 @@ export default function DoctorPrescriptions() {
     },
     successMessage: "تم حذف الوصفة الطبية بنجاح",
   });
+
+  void deletePrescription;
+  void deleteLoading;
 
   const { updateItem: updatePrescription, loading: updateLoading } = useUpdateMutation<Prescription>("prescriptions", {
     onSuccess: () => {
@@ -212,9 +218,38 @@ export default function DoctorPrescriptions() {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    if (!deletingPrescription) return;
-    deletePrescription(deletingPrescription.id);
+  const handleDeleteConfirm = async () => {
+    if (!deletingPrescription || !doctor) return;
+
+    if (deletingPrescription.doctor_id !== doctor.id) {
+      toast.error("Ù„Ø§ ØªÙ…Ù„Ùƒ ØµÙ„Ø§Ø­ÙŠØ© Ø­Ø°Ù Ù‡Ø°Ù‡ Ø§Ù„ÙˆØµÙØ©");
+      return;
+    }
+
+    setSecureDeleteLoading(true);
+    try {
+      const { error } = await supabase
+        .from("prescriptions")
+        .delete()
+        .eq("id", deletingPrescription.id)
+        .eq("doctor_id", doctor.id)
+        .select("id")
+        .single();
+
+      if (error) {
+        toast.error("ÙØ´Ù„ Ø§Ù„Ø­Ø°Ù", { description: friendlyErrorMessage(error.message) });
+        return;
+      }
+
+      toast.success("ØªÙ… Ø­Ø°Ù Ø§Ù„ÙˆØµÙØ© Ø§Ù„Ø·Ø¨ÙŠØ© Ø¨Ù†Ø¬Ø§Ø­");
+      refetch();
+      setDeleteDialogOpen(false);
+      setDeletingPrescription(null);
+    } catch (err) {
+      toast.error("ÙØ´Ù„ Ø§Ù„Ø­Ø°Ù", { description: friendlyErrorMessage(err) });
+    } finally {
+      setSecureDeleteLoading(false);
+    }
   };
 
   const resetFilters = () => {
@@ -467,7 +502,7 @@ export default function DoctorPrescriptions() {
         cancelText="إلغاء"
         onConfirm={handleDeleteConfirm}
         variant="danger"
-        loading={deleteLoading}
+        loading={secureDeleteLoading}
       />
     </div>
   );

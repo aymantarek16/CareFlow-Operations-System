@@ -47,7 +47,7 @@ export function CreatePatientDialog({ open, onOpenChange, onCreated }: CreatePat
 
     setSubmitting(true);
     try {
-      const { uid, error } = await createUserAsAdmin({
+      const { uid, error, profileSynced } = await createUserAsAdmin({
         email: clean.email,
         password: clean.password,
         name: clean.fullName,
@@ -60,12 +60,14 @@ export function CreatePatientDialog({ open, onOpenChange, onCreated }: CreatePat
       }
       const names = splitName(clean.fullName);
 
-      await supabase
-        .from("users")
-        .upsert(
-          { id: uid, name: clean.fullName, email: clean.email, role: "patient" },
-          { onConflict: "id" },
-        );
+      if (!profileSynced) {
+        await supabase
+          .from("users")
+          .upsert(
+            { id: uid, name: clean.fullName, email: clean.email, role: "patient" },
+            { onConflict: "id" },
+          );
+      }
 
       const { error: patientErr } = await supabase.from("patients").insert({
         user_id: uid,

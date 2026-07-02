@@ -193,7 +193,7 @@ export default function AdminStaff() {
     setCreating(true);
 
     try {
-      const { uid, error } = await createUserAsAdmin({
+      const { uid, error, profileSynced } = await createUserAsAdmin({
         email,
         password,
         name: fullName,
@@ -205,15 +205,17 @@ export default function AdminStaff() {
         return;
       }
 
-      const { error: upsertErr } = await supabase.from("users").upsert(
-        {
-          id: uid,
-          name: fullName,
-          email,
-          role: form.role,
-        },
-        { onConflict: "id" }
-      );
+      const { error: upsertErr } = profileSynced
+        ? { error: null }
+        : await supabase.from("users").upsert(
+            {
+              id: uid,
+              name: fullName,
+              email,
+              role: form.role,
+            },
+            { onConflict: "id" }
+          );
 
       if (upsertErr) {
         toast.error("تم إنشاء الحساب لكن فشل حفظ البيانات", {

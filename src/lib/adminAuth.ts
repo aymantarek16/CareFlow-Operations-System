@@ -31,7 +31,45 @@ export async function createUserAsAdmin({
   password: string;
   name: string;
   role: "admin" | "doctor" | "patient" | "receptionist";
-}): Promise<{ uid: string | null; error: string | null }> {
+}): Promise<{ uid: string | null; error: string | null; profileSynced?: boolean }> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (session?.access_token) {
+    try {
+      const response = await fetch("/api/admin-create-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ email, password, name, role }),
+      });
+
+      if (response.ok) {
+        const payload = (await response.json()) as {
+          uid?: string;
+          message?: string;
+          profileSynced?: boolean;
+        };
+
+        return {
+          uid: payload.uid ?? null,
+          error: payload.uid ? null : payload.message ?? "لم يتم إنشاء المستخدم",
+          profileSynced: payload.profileSynced,
+        };
+      }
+
+      if (response.status !== 404) {
+        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+        return { uid: null, error: payload?.message ?? "فشل إنشاء المستخدم" };
+      }
+    } catch {
+      // Local Vite dev does not serve /api; fall back to the client flow below.
+    }
+  }
+
   // 1. Snapshot the admin session so we can put it back.
   const {
     data: { session: adminSession },
