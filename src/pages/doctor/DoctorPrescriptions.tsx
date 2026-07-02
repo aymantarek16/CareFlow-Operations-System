@@ -222,7 +222,7 @@ export default function DoctorPrescriptions() {
     if (!deletingPrescription || !doctor) return;
 
     if (deletingPrescription.doctor_id !== doctor.id) {
-      toast.error("Ù„Ø§ ØªÙ…Ù„Ùƒ ØµÙ„Ø§Ø­ÙŠØ© Ø­Ø°Ù Ù‡Ø°Ù‡ Ø§Ù„ÙˆØµÙØ©");
+      toast.error("\u0644\u0627 \u062a\u0645\u0644\u0643 \u0635\u0644\u0627\u062d\u064a\u0629 \u062d\u0630\u0641 \u0647\u0630\u0647 \u0627\u0644\u0648\u0635\u0641\u0629");
       return;
     }
 
@@ -237,21 +237,20 @@ export default function DoctorPrescriptions() {
         .single();
 
       if (error) {
-        toast.error("ÙØ´Ù„ Ø§Ù„Ø­Ø°Ù", { description: friendlyErrorMessage(error.message) });
+        toast.error("\u0641\u0634\u0644 \u0627\u0644\u062d\u0630\u0641", { description: friendlyErrorMessage(error.message) });
         return;
       }
 
-      toast.success("ØªÙ… Ø­Ø°Ù Ø§Ù„ÙˆØµÙØ© Ø§Ù„Ø·Ø¨ÙŠØ© Ø¨Ù†Ø¬Ø§Ø­");
+      toast.success("\u062a\u0645 \u062d\u0630\u0641 \u0627\u0644\u0648\u0635\u0641\u0629 \u0627\u0644\u0637\u0628\u064a\u0629 \u0628\u0646\u062c\u0627\u062d");
       refetch();
       setDeleteDialogOpen(false);
       setDeletingPrescription(null);
     } catch (err) {
-      toast.error("ÙØ´Ù„ Ø§Ù„Ø­Ø°Ù", { description: friendlyErrorMessage(err) });
+      toast.error("\u0641\u0634\u0644 \u0627\u0644\u062d\u0630\u0641", { description: friendlyErrorMessage(err) });
     } finally {
       setSecureDeleteLoading(false);
     }
   };
-
   const resetFilters = () => {
     setSearch("");
     setPatientFilter("");
