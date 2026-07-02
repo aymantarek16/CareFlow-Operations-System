@@ -19,24 +19,42 @@ export default async function handler(req, res) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { error } = await supabase
-      .from("activity_logs")
-      .select("id")
-      .limit(1);
+    // اقرأ قيمة ping_count الحالية
+    const { data, error: fetchError } = await supabase
+      .from("system_heartbeat")
+      .select("ping_count")
+      .eq("id", 1)
+      .single();
 
-    if (error) {
+    if (fetchError) {
       return res.status(500).json({
         ok: false,
-        message: "Supabase ping failed",
-        table: "activity_logs",
-        error: error.message,
+        message: "Failed to read heartbeat",
+        error: fetchError.message,
+      });
+    }
+
+    // حدث آخر Ping وزود العداد
+    const { error: updateError } = await supabase
+      .from("system_heartbeat")
+      .update({
+        last_ping: new Date().toISOString(),
+        ping_count: (data?.ping_count ?? 0) + 1,
+      })
+      .eq("id", 1);
+
+    if (updateError) {
+      return res.status(500).json({
+        ok: false,
+        message: "Failed to update heartbeat",
+        error: updateError.message,
       });
     }
 
     return res.status(200).json({
       ok: true,
-      message: "CareFlow is alive",
-      table: "activity_logs",
+      message: "CareFlow heartbeat updated successfully",
+      ping_count: (data?.ping_count ?? 0) + 1,
       time: new Date().toISOString(),
     });
   } catch (error) {
