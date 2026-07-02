@@ -1,17 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(req, res) {
-  // السماح فقط بطلبات GET
-  if (req.method !== "GET") {
-    return res.status(405).json({
-      ok: false,
-      message: "Method Not Allowed",
-    });
-  }
-
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    const supabaseKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
       return res.status(500).json({
@@ -24,7 +19,7 @@ export default async function handler(req, res) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // قراءة قيمة ping_count الحالية
+    // اقرأ قيمة ping_count الحالية
     const { data, error: fetchError } = await supabase
       .from("system_heartbeat")
       .select("ping_count")
@@ -39,7 +34,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // تحديث آخر Ping وزيادة العداد
+    // حدث آخر Ping وزود العداد
     const { error: updateError } = await supabase
       .from("system_heartbeat")
       .update({
