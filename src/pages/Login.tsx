@@ -10,6 +10,8 @@ import {
   ShieldCheck,
   Stethoscope,
   HeartPulse,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 // Only expose demo credentials in development builds. Production users
@@ -42,6 +44,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -113,22 +116,34 @@ export default function LoginPage() {
 
                   {/* Demo credentials (development builds only) */}
                   {SHOW_DEMO_CREDENTIALS && (
-                    <div className="mt-3 md:mt-4 rounded-xl md:rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 md:p-5 shadow-lg shadow-primary/10">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/20">
-                          <ShieldCheck size={12} className="text-primary" />
-                        </div>
-                        <p className="text-xs md:text-sm font-bold text-primary">بيانات الدخول التجريبية</p>
+                    <div className="mt-3 md:mt-4 rounded-lg border border-primary/30 bg-primary/10 p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ShieldCheck size={14} className="text-primary" />
+                        <p className="text-xs font-semibold text-foreground/80">بيانات الدخول التجريبية</p>
                       </div>
-                      <div className="space-y-2">
-                        <div className="rounded-lg bg-background/50 p-3 border border-primary/20">
-                          <p className="text-[10px] md:text-xs text-foreground/60 mb-1">البريد الإلكتروني</p>
-                          <p className="text-xs md:text-sm font-mono font-semibold text-foreground">admin@pro.com</p>
-                        </div>
-                        <div className="rounded-lg bg-background/50 p-3 border border-primary/20">
-                          <p className="text-[10px] md:text-xs text-foreground/60 mb-1">كلمة المرور</p>
-                          <p className="text-xs md:text-sm font-mono font-semibold text-foreground">123456</p>
-                        </div>
+                      <div className="space-y-1.5">
+                        {[
+                          { role: "أدمن", email: "admin@careflow.com", password: "12345678" },
+                          { role: "دكتور", email: "doctor@careflow.com", password: "12345678" },
+                          { role: "مريض", email: "patient@careflow.com", password: "12345678" },
+                          { role: "ريسبشنست", email: "receptionist@careflow.com", password: "12345678" },
+                        ].map(({ role, email, password }) => (
+                          <div key={role} className="flex items-center justify-between gap-2">
+                            <p className="text-[10px] md:text-xs text-foreground/70">
+                              <span className="text-primary font-semibold">{role}:</span> {email}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEmail(email);
+                                setPassword(password);
+                              }}
+                              className="h-6 px-2 rounded-md bg-primary text-[10px] font-bold text-white transition hover:brightness-110"
+                            >
+                              Fill
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -192,16 +207,25 @@ export default function LoginPage() {
 
                   <div>
                     <label className="mb-1 block text-xs md:text-sm text-foreground/70">كلمة المرور</label>
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      autoComplete="current-password"
-                      maxLength={128}
-                      required
-                      className="h-10 md:h-11 w-full rounded-xl md:rounded-2xl border border-foreground/10 bg-foreground/5 px-3 md:px-4 text-sm text-foreground outline-none transition focus:border-primary/50 focus:bg-foreground/[0.07]"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        autoComplete="current-password"
+                        maxLength={128}
+                        required
+                        className="h-10 md:h-11 w-full rounded-xl md:rounded-2xl border border-foreground/10 bg-foreground/5 px-3 md:px-4 text-sm text-foreground outline-none transition focus:border-primary/50 focus:bg-foreground/[0.07]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/40 hover:text-foreground/70 transition"
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                   </div>
 
                   {error && (
