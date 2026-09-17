@@ -113,21 +113,22 @@ export default function LoginPage() {
 
                   {/* Demo credentials (development builds only) */}
                   {SHOW_DEMO_CREDENTIALS && (
-                    <div className="mt-3 md:mt-4 rounded-xl md:rounded-2xl border border-primary/30 bg-primary/10 p-3 md:p-4">
-                      <p className="text-xs md:text-sm font-semibold text-primary">بيانات تجريبية :</p>
-                      <div className="mt-2 grid gap-1.5 md:gap-2 text-[10px] md:text-xs text-foreground/80">
-                        <p>
-                          <span className="text-primary">أدمن :</span> admin@careflow.com / 12345678
-                        </p>
-                        <p>
-                          <span className="text-primary">طبيب :</span> doctor@careflow.com / 12345678
-                        </p>
-                        <p>
-                          <span className="text-primary">مريض :</span> patient@careflow.com / 12345678
-                        </p>
-                        <p>
-                          <span className="text-primary">موظف استقبال :</span> receptionist@careflow.com / 12345678
-                        </p>
+                    <div className="mt-3 md:mt-4 rounded-xl md:rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 md:p-5 shadow-lg shadow-primary/10">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/20">
+                          <ShieldCheck size={12} className="text-primary" />
+                        </div>
+                        <p className="text-xs md:text-sm font-bold text-primary">بيانات الدخول التجريبية</p>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="rounded-lg bg-background/50 p-3 border border-primary/20">
+                          <p className="text-[10px] md:text-xs text-foreground/60 mb-1">البريد الإلكتروني</p>
+                          <p className="text-xs md:text-sm font-mono font-semibold text-foreground">admin@pro.com</p>
+                        </div>
+                        <div className="rounded-lg bg-background/50 p-3 border border-primary/20">
+                          <p className="text-[10px] md:text-xs text-foreground/60 mb-1">كلمة المرور</p>
+                          <p className="text-xs md:text-sm font-mono font-semibold text-foreground">123456</p>
+                        </div>
                       </div>
                     </div>
                   )}
