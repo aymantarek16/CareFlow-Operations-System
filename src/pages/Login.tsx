@@ -120,6 +120,9 @@ export default function LoginPage() {
                         <ShieldCheck size={14} className="text-primary" />
                         <p className="text-xs font-semibold text-foreground/80">بيانات الدخول التجريبية</p>
                       </div>
+                      <p className="text-[10px] md:text-xs text-foreground/60 mb-2">
+                        كلمة المرور لجميع الحسابات: <span className="font-mono font-bold text-primary">12345678</span>
+                      </p>
                       <div className="space-y-1.5">
                         {[
                           { role: "أدمن", email: "admin@careflow.com", password: "12345678" },
