@@ -14,9 +14,8 @@ import {
   EyeOff,
 } from "lucide-react";
 
-// Only expose demo credentials in development builds. Production users
-// should never see the canned passwords.
-const SHOW_DEMO_CREDENTIALS = import.meta.env.DEV;
+// Show demo credentials for testing purposes
+const SHOW_DEMO_CREDENTIALS = true;
 
 // Lightweight animated frame around cards instead of heavy full-page background
 function AnimatedFrame() {
